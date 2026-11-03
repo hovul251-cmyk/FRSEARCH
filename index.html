@@ -48,6 +48,7 @@
       background-attachment: fixed;
     }
 
+    /* Шапка */
     header {
       position: sticky;
       top: 0;
@@ -80,6 +81,12 @@
       box-shadow: 0 0 8px var(--ok);
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .filter-select {
       background: var(--surface);
       color: var(--text);
@@ -92,6 +99,7 @@
       outline: none;
     }
 
+    /* Основной контейнер */
     main {
       flex: 1;
       padding: 16px 16px 96px;
@@ -100,9 +108,21 @@
       margin: 0 auto;
     }
 
-    .screen-section { display: none; }
-    .screen-section.active { display: block; }
+    .screen-section {
+      display: none;
+    }
+    .screen-section.active {
+      display: block;
+    }
 
+    /* Поиск по играм */
+    .search-bar {
+      margin-bottom: 12px;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Список игроков (только настоящие записи из БД) */
     .mate-list {
       display: flex;
       flex-direction: column;
@@ -138,7 +158,10 @@
       color: #fff;
     }
 
-    .mate-info { flex: 1; min-width: 0; }
+    .mate-info {
+      flex: 1;
+      min-width: 0;
+    }
 
     .mate-title {
       display: flex;
@@ -166,6 +189,7 @@
       word-break: break-word;
     }
 
+    /* Кнопки */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -186,6 +210,19 @@
     .btn:hover { background: var(--accent-hover); }
     .btn:active { transform: scale(0.95); }
 
+    .btn-ghost {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-ghost:hover { border-color: var(--accent); background: var(--surface-hover); }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
     .btn-block {
       width: 100%;
       padding: 14px;
@@ -194,6 +231,7 @@
       margin-top: 8px;
     }
 
+    /* Форма профиля */
     .form-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -201,7 +239,9 @@
       padding: 18px;
     }
 
-    .form-group { margin-bottom: 14px; }
+    .form-group {
+      margin-bottom: 14px;
+    }
 
     label {
       display: block;
@@ -222,8 +262,11 @@
       font-size: 14px;
       outline: none;
     }
-    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
 
+    /* Нижнее меню */
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -254,8 +297,11 @@
       gap: 4px;
       transition: color 0.15s;
     }
-    .nav-btn.active { color: var(--accent); }
+    .nav-btn.active {
+      color: var(--accent);
+    }
 
+    /* Экран чата */
     .chat-modal {
       position: fixed;
       inset: 0;
@@ -264,7 +310,9 @@
       display: none;
       flex-direction: column;
     }
-    .chat-modal.open { display: flex; }
+    .chat-modal.open {
+      display: flex;
+    }
 
     .chat-top {
       padding: max(12px, env(safe-area-inset-top)) 16px 12px;
@@ -323,6 +371,7 @@
       gap: 8px;
     }
 
+    /* Уведомления (Тосты) */
     #toast {
       position: fixed;
       top: 18px;
@@ -339,7 +388,9 @@
       box-shadow: 0 6px 20px rgba(0,0,0,0.4);
       pointer-events: none;
     }
-    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
 
     .empty-box {
       text-align: center;
@@ -349,6 +400,7 @@
       background: var(--surface);
       border: 1px dashed var(--border);
       border-radius: var(--radius);
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -358,30 +410,39 @@
 
   <header>
     <div class="brand">
-      <div class="status-dot" id="db-dot" title="Статус базы"></div>
+      <div class="status-dot" id="db-dot" title="Статус базы Supabase"></div>
       FR<span>Search</span>
     </div>
-    <select class="filter-select" id="cat-filter">
-      <option value="Все">Все категории</option>
-      <option value="Игры">Игры</option>
-      <option value="Киберспорт">Киберспорт</option>
-      <option value="Общение">Общение</option>
-      <option value="Развлечение">Развлечение</option>
-    </select>
+    <div class="header-actions" id="header-filters">
+      <select class="filter-select" id="cat-filter">
+        <option value="Все">Все категории</option>
+        <option value="Игры">Игры</option>
+        <option value="Киберспорт">Киберспорт</option>
+        <option value="Общение">Общение</option>
+        <option value="Развлечение">Развлечение</option>
+      </select>
+    </div>
   </header>
 
   <main>
+    <!-- 1. Вкладка: Поиск тиммейтов (только реальные игроки из БД) -->
     <section id="sec-feed" class="screen-section active">
+      <div class="search-bar">
+        <input type="text" id="game-search" placeholder="Поиск по игре или никнейму...">
+        <button type="button" class="btn btn-ghost" id="btn-refresh">Обновить</button>
+      </div>
       <div class="mate-list" id="feed-container"></div>
     </section>
 
+    <!-- 2. Вкладка: Диалоги -->
     <section id="sec-chats" class="screen-section">
       <div class="mate-list" id="chats-container"></div>
     </section>
 
+    <!-- 3. Вкладка: Профиль -->
     <section id="sec-profile" class="screen-section">
       <div class="form-card">
-        <h3 style="margin-bottom: 14px; font-size: 17px;">Моя заявка в поиске</h3>
+        <h3 style="margin-bottom: 14px; font-size: 17px;">Моя анкета</h3>
         <div class="form-group">
           <label>Ваш никнейм *</label>
           <input type="text" id="in-name" placeholder="Например: Shadow" maxlength="30">
@@ -409,17 +470,26 @@
           <label>Кого ищете / О себе</label>
           <textarea id="in-about" rows="3" placeholder="Ищу +1 в стак на вечер, связь Discord..."></textarea>
         </div>
-        <button type="button" class="btn btn-block" id="btn-save">Опубликовать в список</button>
+        <button type="button" class="btn btn-block" id="btn-save">Сохранить в базу</button>
+        <button type="button" class="btn btn-danger btn-block" id="btn-delete" style="display: none;">Удалить мою анкету</button>
       </div>
     </section>
   </main>
 
+  <!-- Нижняя панель навигации -->
   <nav class="bottom-nav">
-    <button type="button" class="nav-btn active" id="nav-feed"><span>Поиск</span></button>
-    <button type="button" class="nav-btn" id="nav-chats"><span>Диалоги</span></button>
-    <button type="button" class="nav-btn" id="nav-profile"><span>Профиль</span></button>
+    <button type="button" class="nav-btn active" id="nav-feed">
+      <span>Поиск</span>
+    </button>
+    <button type="button" class="nav-btn" id="nav-chats">
+      <span>Диалоги</span>
+    </button>
+    <button type="button" class="nav-btn" id="nav-profile">
+      <span>Профиль</span>
+    </button>
   </nav>
 
+  <!-- Модальное окно чата -->
   <div class="chat-modal" id="chat-modal">
     <div class="chat-top">
       <button type="button" class="back-btn" id="btn-close-chat">← Назад</button>
@@ -434,6 +504,7 @@
 
   <script>
     (function() {
+      // 1. КОНФИГУРАЦИЯ SUPABASE
       const SUPABASE_URL = "https://gvpjiadxwqcjrkwsnzka.supabase.co";
       const SUPABASE_KEY = "sb_publishable_s51L6_hl1Lnirc3Tq7TYKQ_-0zPA9JC";
 
@@ -443,7 +514,7 @@
           sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
       } catch (e) {
-        console.warn("Supabase Init Warning:", e);
+        console.warn("Supabase Init Error:", e);
       }
 
       try {
@@ -469,15 +540,10 @@
       }
       const myUid = getMyUid();
 
-      const DEMO_PLAYERS = [
-        { id: "d1", name: "Артём", age: 20, category: "Киберспорт", game: "CS2", about: "Faceit 8 lvl, ищу стак на вечер со связью" },
-        { id: "d2", name: "Алина", age: 21, category: "Игры", game: "Valorant / Genshin", about: "Играю по вечерам, без токсичности" },
-        { id: "d3", name: "Максим", age: 24, category: "Игры", game: "Dota 2", about: "Позиция 1/2, 5500 MMR, ищу саппорта в пати" },
-        { id: "d4", name: "София", age: 19, category: "Общение", game: "Discord / Co-op", about: "Поболтать и поиграть в кооп-хорроры" }
-      ];
-
       let currentCategory = "Все";
+      let searchQuery = "";
       let currentChatPartner = null;
+      let realtimeSubscription = null;
 
       function notify(msg) {
         const t = document.getElementById("toast");
@@ -485,7 +551,7 @@
         t.textContent = msg;
         t.classList.add("show");
         clearTimeout(notify.timer);
-        notify.timer = setTimeout(() => t.classList.remove("show"), 2500);
+        notify.timer = setTimeout(() => t.classList.remove("show"), 2600);
       }
 
       function esc(str) {
@@ -494,6 +560,7 @@
         }[m]));
       }
 
+      // 2. НАВИГАЦИЯ ПО ВКЛАДКАМ
       function openTab(tabName) {
         ["feed", "chats", "profile"].forEach(t => {
           const sec = document.getElementById("sec-" + t);
@@ -502,11 +569,12 @@
           if (btn) btn.classList.toggle("active", t === tabName);
         });
 
-        const filterEl = document.getElementById("cat-filter");
+        const filterEl = document.getElementById("header-filters");
         if (filterEl) filterEl.style.visibility = (tabName === "feed") ? "visible" : "hidden";
 
         if (tabName === "feed") renderFeed();
         if (tabName === "chats") renderChatsList();
+        if (tabName === "profile") loadMyProfile();
       }
 
       document.getElementById("nav-feed").addEventListener("click", () => openTab("feed"));
@@ -518,69 +586,89 @@
         renderFeed();
       });
 
+      document.getElementById("game-search").addEventListener("input", (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        renderFeed();
+      });
+
+      document.getElementById("btn-refresh").addEventListener("click", () => {
+        renderFeed();
+        notify("Список обновлен");
+      });
+
+      // 3. ЗАГРУЗКА ТОЛЬКО РЕАЛЬНЫХ АНКЕТ ИЗ SUPABASE
       async function renderFeed() {
         const box = document.getElementById("feed-container");
-        box.innerHTML = `<div class="empty-box">Обновление списка...</div>`;
-
-        let list = [];
-
-        if (sbClient) {
-          try {
-            const { data, error } = await sbClient
-              .from("profiles")
-              .select("*")
-              .order("created_at", { ascending: false });
-
-            if (!error && Array.isArray(data)) {
-              list = data;
-              document.getElementById("db-dot").style.background = "#22c55e";
-            } else {
-              document.getElementById("db-dot").style.background = "#eab308";
-            }
-          } catch (e) {
-            document.getElementById("db-dot").style.background = "#ef4444";
-          }
-        }
-
-        try {
-          const localProf = JSON.parse(localStorage.getItem("frs_profile") || "null");
-          if (localProf && !list.some(x => x.id === localProf.id)) {
-            list.unshift(localProf);
-          }
-        } catch (e) {}
-
-        DEMO_PLAYERS.forEach(d => {
-          if (!list.some(x => x.id === d.id)) list.push(d);
-        });
-
-        if (currentCategory !== "Все") {
-          list = list.filter(item => item.category === currentCategory);
-        }
-
-        if (list.length === 0) {
-          box.innerHTML = `<div class="empty-box">В этой категории пока нет заявок.</div>`;
+        if (!sbClient) {
+          box.innerHTML = `<div class="empty-box">Клиент Supabase не инициализирован.</div>`;
           return;
         }
 
-        box.innerHTML = list.map(p => {
-          const isMe = p.id === myUid;
-          return `
-            <div class="mate-row">
-              <div class="avatar">${esc((p.name || "?")[0].toUpperCase())}</div>
-              <div class="mate-info">
-                <div class="mate-title">
-                  <span>${esc(p.name)}${p.age ? ", " + esc(p.age) : ""} ${isMe ? "(Вы)" : ""}</span>
-                  <span class="badge">${esc(p.category || "Игры")}</span>
+        box.innerHTML = `<div class="empty-box">Загрузка игроков из базы...</div>`;
+
+        try {
+          let query = sbClient
+            .from("profiles")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (currentCategory !== "Все") {
+            query = query.eq("category", currentCategory);
+          }
+
+          const { data, error } = await query;
+
+          if (error) {
+            document.getElementById("db-dot").style.background = "#ef4444";
+            box.innerHTML = `<div class="empty-box">Ошибка БД: ${esc(error.message)}<br><small>Убедитесь, что таблица profiles создана в SQL Editor.</small></div>`;
+            return;
+          }
+
+          document.getElementById("db-dot").style.background = "#22c55e";
+
+          let list = Array.isArray(data) ? data : [];
+
+          if (searchQuery) {
+            list = list.filter(item =>
+              (item.game && item.game.toLowerCase().includes(searchQuery)) ||
+              (item.name && item.name.toLowerCase().includes(searchQuery)) ||
+              (item.about && item.about.toLowerCase().includes(searchQuery))
+            );
+          }
+
+          if (list.length === 0) {
+            box.innerHTML = `
+              <div class="empty-box">
+                В базе пока нет активных анкет.<br>
+                Перейдите во вкладку <b>«Профиль»</b> и создайте первую!
+              </div>`;
+            return;
+          }
+
+          box.innerHTML = list.map(p => {
+            const isMe = p.id === myUid;
+            return `
+              <div class="mate-row">
+                <div class="avatar">${esc((p.name || "?")[0].toUpperCase())}</div>
+                <div class="mate-info">
+                  <div class="mate-title">
+                    <span>${esc(p.name)}${p.age ? ", " + esc(p.age) : ""} ${isMe ? "(Вы)" : ""}</span>
+                    <span class="badge">${esc(p.category || "Игры")}</span>
+                  </div>
+                  <div class="mate-desc"><b>${esc(p.game)}</b> — ${esc(p.about || "Ищу команду")}</div>
                 </div>
-                <div class="mate-desc"><b>${esc(p.game)}</b> — ${esc(p.about || "Ищу команду")}</div>
+                ${isMe 
+                  ? `<button type="button" class="btn btn-ghost" data-edit="1">Изменить</button>` 
+                  : `<button type="button" class="btn" data-chat-id="${esc(p.id)}" data-chat-name="${esc(p.name)}">Написать</button>`
+                }
               </div>
-              ${isMe 
-                ? `<button type="button" class="btn" data-edit="1">Изменить</button>` 
-                : `<button type="button" class="btn" data-chat-id="${esc(p.id)}" data-chat-name="${esc(p.name)}">Написать</button>`
-              }
-            </div>
-          `;
-        }).join("");
+            `;
+          }).join("");
+
+        } catch (e) {
+          document.getElementById("db-dot").style.background = "#ef4444";
+          box.innerHTML = `<div class="empty-box">Ошибка сети: ${esc(e.message)}</div>`;
+        }
       }
 
       document.getElementById("feed-container").addEventListener("click", (e) => {
@@ -595,6 +683,30 @@
         }
       });
 
+      // 4. ПРОФИЛЬ И СОХРАНЕНИЕ В БАЗУ SUPABASE
+      async function loadMyProfile() {
+        if (!sbClient) return;
+        try {
+          const { data } = await sbClient
+            .from("profiles")
+            .select("*")
+            .eq("id", myUid)
+            .maybeSingle();
+
+          const delBtn = document.getElementById("btn-delete");
+          if (data) {
+            document.getElementById("in-name").value = data.name || "";
+            document.getElementById("in-age").value = data.age || "";
+            document.getElementById("in-cat").value = data.category || "Игры";
+            document.getElementById("in-game").value = data.game || "";
+            document.getElementById("in-about").value = data.about || "";
+            delBtn.style.display = "block";
+          } else {
+            delBtn.style.display = "none";
+          }
+        } catch (e) {}
+      }
+
       document.getElementById("btn-save").addEventListener("click", async () => {
         const name = document.getElementById("in-name").value.trim();
         const age = parseInt(document.getElementById("in-age").value, 10) || 18;
@@ -603,84 +715,105 @@
         const about = document.getElementById("in-about").value.trim() || "Ищу тиммейтов";
 
         if (!name || !game) {
-          notify("Пожалуйста, укажите никнейм и игру!");
+          notify("Заполните никнейм и игру!");
+          return;
+        }
+
+        if (!sbClient) {
+          notify("Нет подключения к базе данных");
           return;
         }
 
         const profileObj = { id: myUid, name, age, category, game, about };
 
-        try {
-          localStorage.setItem("frs_profile", JSON.stringify(profileObj));
-        } catch (e) {}
-
-        if (sbClient) {
-          try {
-            await sbClient.from("profiles").upsert(profileObj);
-          } catch (e) {}
+        const { error } = await sbClient.from("profiles").upsert(profileObj);
+        if (error) {
+          notify("Ошибка сохранения: " + error.message);
+          return;
         }
 
-        notify("Анкета опубликована!");
+        notify("Анкета сохранена в базу!");
         openTab("feed");
       });
 
-      function getLocalMessages() {
-        try {
-          return JSON.parse(localStorage.getItem("frs_msgs") || "[]");
-        } catch (e) {
-          return [];
+      document.getElementById("btn-delete").addEventListener("click", async () => {
+        if (!sbClient) return;
+        const { error } = await sbClient.from("profiles").delete().eq("id", myUid);
+        if (error) {
+          notify("Ошибка удаления: " + error.message);
+          return;
         }
-      }
+        document.getElementById("in-name").value = "";
+        document.getElementById("in-game").value = "";
+        document.getElementById("in-about").value = "";
+        document.getElementById("btn-delete").style.display = "none";
+        notify("Анкета удалена из базы");
+        openTab("feed");
+      });
 
-      function saveLocalMessage(msg) {
-        try {
-          const arr = getLocalMessages();
-          arr.push(msg);
-          localStorage.setItem("frs_msgs", JSON.stringify(arr));
-        } catch (e) {}
-      }
-
+      // 5. РЕАЛЬНЫЙ ЧАТ ЧЕРЕЗ SUPABASE + REALTIME WEBSOCKET
       async function openChatModal(partnerId, partnerName) {
         currentChatPartner = { id: partnerId, name: partnerName };
         document.getElementById("chat-title").textContent = partnerName || "Игрок";
         document.getElementById("chat-modal").classList.add("open");
         await loadConversation(partnerId);
+
+        if (sbClient) {
+          if (realtimeSubscription) sbClient.removeChannel(realtimeSubscription);
+          realtimeSubscription = sbClient
+            .channel("realtime_messages")
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, payload => {
+              const m = payload.new;
+              if (!currentChatPartner) return;
+              const isRelevant =
+                (m.sender_id === myUid && m.receiver_id === currentChatPartner.id) ||
+                (m.sender_id === currentChatPartner.id && m.receiver_id === myUid);
+              if (isRelevant && m.sender_id !== myUid) {
+                appendBubble(m.content, false);
+              }
+            })
+            .subscribe();
+        }
       }
 
       document.getElementById("btn-close-chat").addEventListener("click", () => {
         document.getElementById("chat-modal").classList.remove("open");
         currentChatPartner = null;
+        if (sbClient && realtimeSubscription) {
+          sbClient.removeChannel(realtimeSubscription);
+          realtimeSubscription = null;
+        }
       });
 
       async function loadConversation(partnerId) {
         const box = document.getElementById("chat-box");
-        box.innerHTML = "";
+        box.innerHTML = `<div class="empty-box">Загрузка сообщений...</div>`;
 
-        let msgs = [];
+        if (!sbClient) return;
 
-        if (sbClient) {
-          try {
-            const { data, error } = await sbClient
-              .from("messages")
-              .select("*")
-              .or(`and(sender_id.eq.${myUid},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${myUid})`)
-              .order("created_at", { ascending: true });
-            if (!error && Array.isArray(data)) msgs = data;
-          } catch (e) {}
+        try {
+          const { data, error } = await sbClient
+            .from("messages")
+            .select("*")
+            .or(`and(sender_id.eq.${myUid},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${myUid})`)
+            .order("created_at", { ascending: true });
+
+          box.innerHTML = "";
+
+          if (error) {
+            box.innerHTML = `<div class="empty-box">Ошибка загрузки чата: ${esc(error.message)}</div>`;
+            return;
+          }
+
+          if (!data || data.length === 0) {
+            box.innerHTML = `<div class="empty-box">Сообщений пока нет. Напишите первым!</div>`;
+            return;
+          }
+
+          data.forEach(m => appendBubble(m.content, m.sender_id === myUid));
+        } catch (e) {
+          box.innerHTML = `<div class="empty-box">Ошибка сети</div>`;
         }
-
-        const local = getLocalMessages().filter(m =>
-          (m.sender_id === myUid && m.receiver_id === partnerId) ||
-          (m.sender_id === partnerId && m.receiver_id === myUid)
-        );
-
-        const combined = msgs.length ? msgs : local;
-
-        if (combined.length === 0) {
-          box.innerHTML = `<div class="empty-box">Напишите первое сообщение игроку ${esc(currentChatPartner.name)}!</div>`;
-          return;
-        }
-
-        combined.forEach(m => appendBubble(m.content, m.sender_id === myUid));
       }
 
       function appendBubble(text, isMe) {
@@ -698,55 +831,19 @@
       async function handleSend() {
         const input = document.getElementById("chat-input");
         const text = input.value.trim();
-        if (!text || !currentChatPartner) return;
+        if (!text || !currentChatPartner || !sbClient) return;
 
         input.value = "";
-        const partner = currentChatPartner;
-
-        const msgObj = {
-          sender_id: myUid,
-          receiver_id: partner.id,
-          content: text,
-          receiver_name: partner.name,
-          ts: Date.now()
-        };
-
         appendBubble(text, true);
-        saveLocalMessage(msgObj);
 
-        if (sbClient) {
-          try {
-            await sbClient.from("messages").insert({
-              sender_id: myUid,
-              receiver_id: partner.id,
-              content: text
-            });
-          } catch (e) {}
-        }
+        const { error } = await sbClient.from("messages").insert({
+          sender_id: myUid,
+          receiver_id: currentChatPartner.id,
+          content: text
+        });
 
-        if (partner.id.startsWith("d")) {
-          setTimeout(() => {
-            const replies = [
-              "Привет! Го в дискорд, я сейчас в сети.",
-              "Привет, кидай пати!",
-              "Отлично, через 10 минут запускаю катку.",
-              "Добавляйся, сыграем пару матчей!"
-            ];
-            const replyText = replies[Math.floor(Math.random() * replies.length)];
-            const replyMsg = {
-              sender_id: partner.id,
-              receiver_id: myUid,
-              content: replyText,
-              receiver_name: partner.name,
-              ts: Date.now()
-            };
-            saveLocalMessage(replyMsg);
-            if (currentChatPartner && currentChatPartner.id === partner.id) {
-              appendBubble(replyText, false);
-            } else {
-              notify("Новое сообщение от " + partner.name);
-            }
-          }, 900);
+        if (error) {
+          notify("Ошибка отправки: " + error.message);
         }
       }
 
@@ -755,33 +852,67 @@
         if (e.key === "Enter") handleSend();
       });
 
+      // 6. СПИСОК РЕАЛЬНЫХ ДИАЛОГОВ ИЗ SUPABASE
       async function renderChatsList() {
         const box = document.getElementById("chats-container");
-        const allLocal = getLocalMessages();
+        if (!sbClient) return;
 
-        const map = new Map();
-        allLocal.forEach(m => {
-          const isMe = m.sender_id === myUid;
-          const pid = isMe ? m.receiver_id : m.sender_id;
-          const pname = m.receiver_name || (DEMO_PLAYERS.find(d => d.id === pid)?.name) || "Игрок";
-          map.set(pid, { id: pid, name: pname, last: m.content });
-        });
+        box.innerHTML = `<div class="empty-box">Загрузка диалогов...</div>`;
 
-        if (map.size === 0) {
-          box.innerHTML = `<div class="empty-box">У вас пока нет активных переписок.<br>Нажмите «Написать» рядом с любым игроком в Поиске!</div>`;
-          return;
+        try {
+          const { data: msgs, error } = await sbClient
+            .from("messages")
+            .select("*")
+            .or(`sender_id.eq.${myUid},receiver_id.eq.${myUid}`)
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            box.innerHTML = `<div class="empty-box">Ошибка БД: ${esc(error.message)}</div>`;
+            return;
+          }
+
+          if (!msgs || msgs.length === 0) {
+            box.innerHTML = `<div class="empty-box">У вас пока нет активных переписок.</div>`;
+            return;
+          }
+
+          const partnersMap = new Map();
+          msgs.forEach(m => {
+            const pid = m.sender_id === myUid ? m.receiver_id : m.sender_id;
+            if (!partnersMap.has(pid)) {
+              partnersMap.set(pid, m.content);
+            }
+          });
+
+          const partnerIds = Array.from(partnersMap.keys());
+          const { data: profiles } = await sbClient
+            .from("profiles")
+            .select("id, name")
+            .in("id", partnerIds);
+
+          const nameLookup = {};
+          if (profiles) {
+            profiles.forEach(p => { nameLookup[p.id] = p.name; });
+          }
+
+          box.innerHTML = partnerIds.map(pid => {
+            const pName = nameLookup[pid] || "Игрок";
+            const lastMsg = partnersMap.get(pid) || "";
+            return `
+              <div class="mate-row" style="cursor: pointer;" data-open-id="${esc(pid)}" data-open-name="${esc(pName)}">
+                <div class="avatar">${esc(pName[0].toUpperCase())}</div>
+                <div class="mate-info">
+                  <div class="mate-title">${esc(pName)}</div>
+                  <div class="mate-desc">${esc(lastMsg)}</div>
+                </div>
+                <button type="button" class="btn">Открыть</button>
+              </div>
+            `;
+          }).join("");
+
+        } catch (e) {
+          box.innerHTML = `<div class="empty-box">Ошибка загрузки диалогов</div>`;
         }
-
-        box.innerHTML = Array.from(map.values()).reverse().map(item => `
-          <div class="mate-row" style="cursor: pointer;" data-open-id="${esc(item.id)}" data-open-name="${esc(item.name)}">
-            <div class="avatar">${esc(item.name[0].toUpperCase())}</div>
-            <div class="mate-info">
-              <div class="mate-title">${esc(item.name)}</div>
-              <div class="mate-desc">${esc(item.last)}</div>
-            </div>
-            <button type="button" class="btn">Открыть</button>
-          </div>
-        `).join("");
       }
 
       document.getElementById("chats-container").addEventListener("click", (e) => {
@@ -791,17 +922,7 @@
         }
       });
 
-      try {
-        const savedProf = JSON.parse(localStorage.getItem("frs_profile") || "null");
-        if (savedProf) {
-          document.getElementById("in-name").value = savedProf.name || "";
-          document.getElementById("in-age").value = savedProf.age || "";
-          document.getElementById("in-cat").value = savedProf.category || "Игры";
-          document.getElementById("in-game").value = savedProf.game || "";
-          document.getElementById("in-about").value = savedProf.about || "";
-        }
-      } catch (e) {}
-
+      // Старт
       renderFeed();
     })();
   </script>
