@@ -20,7 +20,6 @@
       --accent-glow: rgba(99, 102, 241, 0.35);
       --text: #f8fafc;
       --text-muted: #94a3b8;
-      --danger: #ef4444;
       --radius: 16px;
     }
 
@@ -35,7 +34,6 @@
       flex-direction: column;
     }
 
-    /* Ambient background gradient */
     body::before {
       content: "";
       position: fixed;
@@ -49,7 +47,7 @@
     button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
     input, textarea, select {
       width: 100%;
-      background: rgba(15, 18, 33, 0.8);
+      background: rgba(15, 18, 33, 0.85);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 12px 14px;
@@ -94,10 +92,9 @@
       padding: 14px 16px 90px;
       display: none;
     }
-    .view.active { display: block; animation: fadeUp 0.3s ease; }
+    .view.active { display: block; animation: fadeUp 0.25s ease; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Табличный / списочный вид вместо громоздких анкет */
     .mate-list { display: flex; flex-direction: column; gap: 10px; }
     .mate-row {
       display: flex;
@@ -108,7 +105,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       backdrop-filter: blur(10px);
-      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      transition: background 0.2s, border-color 0.2s;
     }
     .mate-row:hover { background: var(--card-hover); border-color: rgba(99, 102, 241, 0.4); }
     .avatar {
@@ -146,7 +143,6 @@
     }
     .btn-act:active { transform: scale(0.96); }
 
-    /* Панель навигации */
     .tabs {
       position: fixed;
       bottom: 0;
@@ -154,7 +150,7 @@
       right: 0;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      background: rgba(11, 13, 23, 0.85);
+      background: rgba(11, 13, 23, 0.92);
       backdrop-filter: blur(20px);
       border-top: 1px solid var(--border);
       padding-bottom: env(safe-area-inset-bottom);
@@ -170,7 +166,6 @@
     }
     .tab-btn.active { color: var(--accent); }
 
-    /* Окно чата */
     #chat-screen {
       position: fixed;
       inset: 0;
@@ -212,7 +207,7 @@
       display: flex;
       gap: 8px;
       border-top: 1px solid var(--border);
-      background: rgba(11, 13, 23, 0.9);
+      background: rgba(11, 13, 23, 0.95);
     }
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
@@ -225,7 +220,8 @@
       border-radius: 12px;
       box-shadow: 0 4px 18px var(--accent-glow);
     }
-    .empty-state { text-align: center; color: var(--text-muted); margin-top: 60px; font-size: 14px; }
+    .btn-main:active { transform: scale(0.98); }
+    .empty-state { text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -236,17 +232,14 @@
   </header>
 
   <main class="views">
-    <!-- Список тиммейтов (Лента) -->
     <section class="view active" id="view-feed">
       <div class="mate-list" id="feed-list"></div>
     </section>
 
-    <!-- Чаты -->
     <section class="view" id="view-chats">
       <div class="mate-list" id="chats-list"></div>
     </section>
 
-    <!-- Профиль -->
     <section class="view" id="view-profile">
       <div style="max-width: 480px; margin: 0 auto;">
         <div class="form-group">
@@ -273,49 +266,48 @@
           <input type="text" id="prof-game" placeholder="Например: CS2, Dota 2, Valorant" maxlength="40">
         </div>
         <div class="form-group">
-          <label>О себе / Кого вы ищете</label>
-          <textarea id="prof-about" rows="3" placeholder="Ищу тиммейта для регулярных каток..."></textarea>
+          <label>О себе</label>
+          <textarea id="prof-about" rows="3" placeholder="Ищу тиммейта для совместных игр..."></textarea>
         </div>
-        <button class="btn-main" id="save-profile-btn">Сохранить данные</button>
+        <button class="btn-main" id="save-profile-btn" type="button">Сохранить данные</button>
       </div>
     </section>
   </main>
 
-  <nav class="tabs">
+  <nav class="tabs" id="bottom-tabs">
     <button class="tab-btn active" data-tab="feed">Поиск</button>
     <button class="tab-btn" data-tab="chats">Сообщения</button>
     <button class="tab-btn" data-tab="profile">Профиль</button>
   </nav>
 
-  <!-- Экран личных сообщений -->
   <section id="chat-screen">
     <div class="chat-header">
-      <button id="close-chat" style="font-size: 20px;">✕</button>
+      <button id="close-chat" style="font-size: 20px; padding: 4px 8px;">✕</button>
       <div style="font-weight: 700;" id="chat-target-name">Диалог</div>
     </div>
     <div class="messages-area" id="chat-messages"></div>
     <div class="chat-input-bar">
       <input type="text" id="chat-input" placeholder="Написать сообщение...">
-      <button class="btn-act" id="send-btn">Отправить</button>
+      <button class="btn-act" id="send-btn" type="button">Отправить</button>
     </div>
   </section>
 
   <script>
-    /* ========================================================
-       КОНФИГУРАЦИЯ SUPABASE
-       Замените URL и ANON_KEY на данные вашего проекта Supabase
-       ======================================================== */
-    const SUPABASE_URL = "https://gvpjiadxwqcjrkwsnzka.supabase.co";
+    const SUPABASE_URL = "https://gvpjiadxwqcjrkwsnzka.supabase.co"; 
     const SUPABASE_ANON_KEY = "sb_publishable_s51L6_hl1Lnirc3Tq7TYKQ_-0zPA9JC";
-    const supabase = (SUPABASE_URL.indexOf("YOUR_PROJECT") === -1) 
-      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
-      : null;
 
-    // Инициализация Telegram WebApp
+    let supabase = null;
+    try {
+      if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (err) {
+      console.warn("Supabase init error:", err);
+    }
+
     const tg = window.Telegram?.WebApp;
     try { tg?.ready(); tg?.expand(); } catch(e) {}
 
-    // Генерация / чтение ID текущего пользователя
     const myUid = tg?.initDataUnsafe?.user?.id ? "tg_" + tg.initDataUnsafe.user.id
       : (localStorage.getItem("app_uid") || (() => {
           const id = "u_" + Math.random().toString(36).substring(2, 9);
@@ -327,54 +319,62 @@
     let activeChatWith = null;
     let realtimeChannel = null;
 
-    // Навигация
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-        btn.classList.add("active");
-        activeTab = btn.dataset.tab;
-        document.getElementById(`view-${activeTab}`).classList.add("active");
-        if (activeTab === "feed") loadFeed();
-        if (activeTab === "chats") loadDialogs();
-      };
+    function switchTab(tabId) {
+      activeTab = tabId;
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tabId));
+      document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === `view-${tabId}`));
+
+      if (tabId === "feed") loadFeed();
+      if (tabId === "chats") loadDialogs();
+    }
+
+    document.getElementById("bottom-tabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab-btn");
+      if (btn) switchTab(btn.dataset.tab);
     });
 
-    // 1. Загрузка ленты тиммейтов
     async function loadFeed() {
       const container = document.getElementById("feed-list");
       if (!supabase) {
-        container.innerHTML = `<div class="empty-state">Подключите Supabase для отображения списка игроков.</div>`;
+        container.innerHTML = `<div class="empty-state">Ошибка инициализации базы данных.</div>`;
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .neq("id", myUid)
-        .order("created_at", { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .neq("id", myUid)
+          .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
-        container.innerHTML = `<div class="empty-state">Игроки не найдены. Создайте свой профиль первым!</div>`;
-        return;
-      }
+        if (error) {
+          container.innerHTML = `<div class="empty-state">Ошибка загрузки: ${error.message}</div>`;
+          return;
+        }
 
-      container.innerHTML = data.map(mate => `
-        <div class="mate-row">
-          <div class="avatar">${mate.name ? mate.name[0].toUpperCase() : "?"}</div>
-          <div class="mate-info">
-            <div class="mate-title">
-              <span>${mate.name}, ${mate.age || ""}</span>
-              <span class="badge">${mate.category || "Игры"}</span>
+        if (!data || data.length === 0) {
+          container.innerHTML = `<div class="empty-state">Игроки не найдены. Перейдите во вкладку «Профиль» и опубликуйте первую анкету!</div>`;
+          return;
+        }
+
+        container.innerHTML = data.map(mate => `
+          <div class="mate-row">
+            <div class="avatar">${(mate.name || "?")[0].toUpperCase()}</div>
+            <div class="mate-info">
+              <div class="mate-title">
+                <span>${escapeHtml(mate.name)}, ${mate.age || ""}</span>
+                <span class="badge">${escapeHtml(mate.category || "Игры")}</span>
+              </div>
+              <div class="mate-desc"><b>${escapeHtml(mate.game || "")}</b>: ${escapeHtml(mate.about || "")}</div>
             </div>
-            <div class="mate-desc"><b>${mate.game || ""}</b>: ${mate.about || ""}</div>
+            <button class="btn-act chat-trigger" data-id="${mate.id}" data-name="${encodeURIComponent(mate.name)}">Написать</button>
           </div>
-          <button class="btn-act" onclick="openChat('${mate.id}', '${encodeURIComponent(mate.name)}')">Написать</button>
-        </div>
-      `).join("");
+        `).join("");
+      } catch (err) {
+        container.innerHTML = `<div class="empty-state">Ошибка соединения: ${err.message}</div>`;
+      }
     }
 
-    // 2. Сохранение профиля
     document.getElementById("save-profile-btn").onclick = async () => {
       const name = document.getElementById("prof-name").value.trim();
       const age = parseInt(document.getElementById("prof-age").value, 10);
@@ -382,34 +382,34 @@
       const game = document.getElementById("prof-game").value.trim();
       const about = document.getElementById("prof-about").value.trim();
 
-      if (!name || !game) return alert("Заполните никнейм и игру!");
+      if (!name || !game) {
+        alert("Заполните никнейм и игру!");
+        return;
+      }
+
+      const profileData = { id: myUid, name, age, category, game, about };
+      localStorage.setItem("local_profile", JSON.stringify(profileData));
 
       if (supabase) {
-        const { error } = await supabase.from("profiles").upsert({
-          id: myUid,
-          name,
-          age,
-          category,
-          game,
-          about
-        });
-        if (!error) alert("Профиль сохранен!");
-        else alert("Ошибка при сохранении: " + error.message);
-      } else {
-        alert("Профиль сохранен локально (Supabase не настроен)");
+        const { error } = await supabase.from("profiles").upsert(profileData);
+        if (error) {
+          alert("Ошибка сохранения: " + error.message);
+          return;
+        }
       }
+
+      alert("Профиль успешно сохранен!");
+      switchTab("feed");
     };
 
-    // 3. Открытие чата и Realtime WebSocket подписка
-    function openChat(targetId, encodedName) {
+    function openChat(targetId, rawName) {
       activeChatWith = targetId;
-      document.getElementById("chat-target-name").innerText = decodeURIComponent(encodedName);
+      document.getElementById("chat-target-name").innerText = decodeURIComponent(rawName);
       document.getElementById("chat-messages").innerHTML = "";
       document.getElementById("chat-screen").classList.add("on");
 
       loadChatMessages(targetId);
 
-      // Включение Realtime через Supabase Channels
       if (supabase) {
         if (realtimeChannel) supabase.removeChannel(realtimeChannel);
         realtimeChannel = supabase.channel(`chat_${targetId}`)
@@ -451,7 +451,6 @@
       area.scrollTop = area.scrollHeight;
     }
 
-    // Отправка сообщения
     async function sendMessage() {
       const input = document.getElementById("chat-input");
       const text = input.value.trim();
@@ -466,19 +465,21 @@
     }
 
     document.getElementById("send-btn").onclick = sendMessage;
-    document.getElementById("chat-input").onkeydown = e => { if (e.key === "Enter") sendMessage(); };
+    document.getElementById("chat-input").onkeydown = (e) => { if (e.key === "Enter") sendMessage(); };
     document.getElementById("close-chat").onclick = () => {
       document.getElementById("chat-screen").classList.remove("on");
       if (realtimeChannel && supabase) supabase.removeChannel(realtimeChannel);
     };
 
-    // Загрузка активных диалогов
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chat-trigger");
+      if (btn) openChat(btn.dataset.id, btn.dataset.name);
+    });
+
     async function loadDialogs() {
       const container = document.getElementById("chats-list");
-      if (!supabase) {
-        container.innerHTML = `<div class="empty-state">Подключите базу данных для загрузки переписок.</div>`;
-        return;
-      }
+      if (!supabase) return;
+
       const { data } = await supabase
         .from("messages")
         .select("sender_id, receiver_id, content, created_at")
@@ -490,40 +491,54 @@
         return;
       }
 
-      // Группировка диалогов по собеседникам
       const userMap = new Set();
-      data.forEach(m => {
-        const partner = m.sender_id === myUid ? m.receiver_id : m.sender_id;
-        userMap.add(partner);
-      });
+      data.forEach(m => userMap.add(m.sender_id === myUid ? m.receiver_id : m.sender_id));
 
       const { data: profiles } = await supabase.from("profiles").select("*").in("id", Array.from(userMap));
-      if (!profiles) return;
+      if (!profiles || profiles.length === 0) {
+        container.innerHTML = `<div class="empty-state">Собеседники не найдены.</div>`;
+        return;
+      }
 
       container.innerHTML = profiles.map(p => `
-        <div class="mate-row" onclick="openChat('${p.id}', '${encodeURIComponent(p.name)}')">
-          <div class="avatar">${p.name[0].toUpperCase()}</div>
+        <div class="mate-row chat-trigger" data-id="${p.id}" data-name="${encodeURIComponent(p.name)}" style="cursor:pointer">
+          <div class="avatar">${(p.name || "?")[0].toUpperCase()}</div>
           <div class="mate-info">
-            <div class="mate-title">${p.name}</div>
-            <div class="mate-desc">Нажмите, чтобы открыть диалог</div>
+            <div class="mate-title">${escapeHtml(p.name)}</div>
+            <div class="mate-desc">Открыть переписку</div>
           </div>
         </div>
       `).join("");
     }
 
-    // Инициализация профиля
-    (async () => {
-      if (!supabase) return;
-      const { data } = await supabase.from("profiles").select("*").eq("id", myUid).single();
-      if (data) {
-        document.getElementById("prof-name").value = data.name || "";
-        document.getElementById("prof-age").value = data.age || "";
-        document.getElementById("prof-cat").value = data.category || "Игры";
-        document.getElementById("prof-game").value = data.game || "";
-        document.getElementById("prof-about").value = data.about || "";
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      let profile = null;
+      try {
+        const local = localStorage.getItem("local_profile");
+        if (local) profile = JSON.parse(local);
+      } catch(e) {}
+
+      if (supabase) {
+        try {
+          const { data } = await supabase.from("profiles").select("*").eq("id", myUid).single();
+          if (data) profile = data;
+        } catch(e) {}
       }
+
+      if (profile) {
+        document.getElementById("prof-name").value = profile.name || "";
+        document.getElementById("prof-age").value = profile.age || "";
+        document.getElementById("prof-cat").value = profile.category || "Игры";
+        document.getElementById("prof-game").value = profile.game || "";
+        document.getElementById("prof-about").value = profile.about || "";
+      }
+
       loadFeed();
-    })();
+    });
   </script>
 </body>
 </html>
