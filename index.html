@@ -587,9 +587,14 @@
     // ================= Data layer =================
     const api = {
       async signIn() {
-        const { data: { session } } = await state.sb.auth.getSession();
-        if (session?.user) return session.user;
         const tgUser = tg?.initDataUnsafe?.user;
+        const { data: { session } } = await state.sb.auth.getSession();
+        if (session?.user) {
+          // Защита: сессия должна принадлежать именно этому Telegram-аккаунту
+          const ownerTg = session.user.user_metadata?.tg_id;
+          if (!tgUser?.id || String(ownerTg) === String(tgUser.id)) return session.user;
+          await state.sb.auth.signOut({ scope: 'local' });
+        }
         const { data, error } = await state.sb.auth.signInAnonymously({
           options: { data: { tg_id: tgUser?.id ?? null, tg_username: tgUser?.username ?? null } },
         });
@@ -1117,6 +1122,28 @@
     });
 
     // ================= Старт =================
+
+    // У каждого Telegram-аккаунта своя сессия: два аккаунта на одном устройстве
+    // больше не делят одного пользователя. Старую общую сессию забирает только
+    // тот Telegram-аккаунт, которым она была создана.
+    function authStorageKey() {
+      const LEGACY_KEY = 'frsearch-auth';
+      const tgId = tg?.initDataUnsafe?.user?.id;
+      if (!tgId) return LEGACY_KEY;
+      const key = LEGACY_KEY + '-tg' + tgId;
+      try {
+        if (!localStorage.getItem(key)) {
+          const legacy = localStorage.getItem(LEGACY_KEY);
+          const owner = legacy && JSON.parse(legacy)?.user?.user_metadata?.tg_id;
+          if (legacy && String(owner) === String(tgId)) {
+            localStorage.setItem(key, legacy);
+            localStorage.removeItem(LEGACY_KEY);
+          }
+        }
+      } catch (_) {}
+      return key;
+    }
+
     async function init() {
       try {
         tg?.ready();
@@ -1134,7 +1161,7 @@
       }
 
       state.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'frsearch-auth' },
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: authStorageKey() },
       });
 
       $('#feed').innerHTML = '<div class="skel"></div>'.repeat(3);
