@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>FRSearch — Поиск тиммейтов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0b0d17;
+      --surface: #141829;
+      --surface-hover: #1c223a;
+      --border: #262d4d;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --ok: #22c55e;
+      --err: #ef4444;
+      --warn: #eab308;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.16) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.14) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11, 13, 23, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand span { color: var(--accent); }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warn);
+      box-shadow: 0 0 8px var(--warn);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-select {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    main {
+      flex: 1;
+      padding: 16px 16px 96px;
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .screen-section { display: none; }
+    .screen-section.active { display: block; }
+
+    /* Информационная плашка об ошибке настройки БД */
+    .sql-alert {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      line-height: 1.45;
+      display: none;
+    }
+    .sql-alert.show { display: block; }
+    .sql-alert b { color: #fca5a5; }
+    .sql-alert pre {
+      background: #080a12;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #cbd5e1;
+      border: 1px solid var(--border);
+    }
+
+    .search-bar {
+      margin-bottom: 12px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .mate-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .mate-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .mate-row:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      flex-shrink: 0;
+      color: #fff;
+    }
+
+    .mate-info { flex: 1; min-width: 0; }
+
+    .mate-title {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.18);
+      color: #a5b4fc;
+    }
+
+    .mate-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      transition: transform 0.1s, background 0.2s, opacity 0.2s;
+      flex-shrink: 0;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:active { transform: scale(0.95); }
+    .btn:disabled { opacity: 0.5; pointer-events: none; }
+
+    .btn-ghost {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-ghost:hover { border-color: var(--accent); background: var(--surface-hover); }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-block {
+      width: 100%;
+      padding: 14px;
+      font-size: 15px;
+      border-radius: 12px;
+      margin-top: 8px;
+    }
+
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .form-group { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(14, 17, 30, 0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 14px 8px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.15s;
+    }
+    .nav-btn.active { color: var(--accent); }
+
+    .chat-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: var(--bg);
+      display: none;
+      flex-direction: column;
+    }
+    .chat-modal.open { display: flex; }
+
+    .chat-top {
+      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bubble {
+      max-width: 78%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .bubble.me {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble.them {
+      align-self: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bottom {
+      padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    #toast {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 999;
+      transition: transform 0.25s ease;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      pointer-events: none;
+      max-width: 92%;
+      text-align: center;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    .empty-box {
+      text-align: center;
+      color: var(--muted);
+      padding: 36px 16px;
+      font-size: 14px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast">Уведомление</div>
+
+  <header>
+    <div class="brand">
+      <div class="status-dot" id="db-dot" title="Статус подключения к Supabase"></div>
+      FR<span>Search</span>
+    </div>
+    <div class="header-actions" id="header-filters">
+      <select class="filter-select" id="cat-filter">
+        <option value="Все">Все категории</option>
+        <option value="Игры">Игры</option>
+        <option value="Киберспорт">Киберспорт</option>
+        <option value="Общение">Общение</option>
+        <option value="Развлечение">Развлечение</option>
+      </select>
+    </div>
+  </header>
+
+  <main>
+    <!-- Блок диагностики ошибок БД / RLS -->
+    <div class="sql-alert" id="sql-error-box">
+      <b>База данных Supabase блокирует запись или таблица не создана!</b><br>
+      <span id="sql-error-text"></span><br>
+      Чтобы анкеты сохранялись и были видны всем пользователям, откройте <b>SQL Editor</b> в панели Supabase, вставьте этот код и нажмите <b>Run</b>:
+      <pre id="sql-snippet">create table if not exists public.profiles (
+  id text primary key,
+  name text not null,
+  age int default 18,
+  category text default 'Игры',
+  game text not null,
+  about text default '',
+  updated_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+create table if not exists public.messages (
+  id uuid default gen_random_uuid() primary key,
+  sender_id text not null,
+  receiver_id text not null,
+  content text not null,
+  created_at timestamptz default now()
+);
+
+-- Отключаем блокировку RLS, чтобы анкеты были видны всем:
+alter table public.profiles disable row level security;
+alter table public.messages disable row level security;
+
+-- Даем полные права публичному ключу (anon):
+grant all on table public.profiles to anon, authenticated;
+grant all on table public.messages to anon, authenticated;</pre>
+    </div>
+
+    <!-- 1. Вкладка: Поиск тиммейтов -->
+    <section id="sec-feed" class="screen-section active">
+      <div class="search-bar">
+        <input type="text" id="game-search" placeholder="Поиск по игре или никнейму...">
+        <button type="button" class="btn btn-ghost" id="btn-refresh">Обновить</button>
+      </div>
+      <div class="mate-list" id="feed-container"></div>
+    </section>
+
+    <!-- 2. Вкладка: Диалоги -->
+    <section id="sec-chats" class="screen-section">
+      <div class="mate-list" id="chats-container"></div>
+    </section>
+
+    <!-- 3. Вкладка: Профиль -->
+    <section id="sec-profile" class="screen-section">
+      <div class="form-card">
+        <h3 style="margin-bottom: 14px; font-size: 17px;">Моя анкета</h3>
+        <div class="form-group">
+          <label>Ваш никнейм *</label>
+          <input type="text" id="in-name" placeholder="Например: Shadow" maxlength="30">
+        </div>
+        <div style="display: flex; gap: 10px;" class="form-group">
+          <div style="flex: 1;">
+            <label>Возраст</label>
+            <input type="number" id="in-age" placeholder="18" min="12" max="99">
+          </div>
+          <div style="flex: 1;">
+            <label>Категория</label>
+            <select id="in-cat">
+              <option value="Игры">Игры</option>
+              <option value="Киберспорт">Киберспорт</option>
+              <option value="Общение">Общение</option>
+              <option value="Развлечение">Развлечение</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Игра / Дисциплина *</label>
+          <input type="text" id="in-game" placeholder="CS2, Dota 2, Valorant..." maxlength="40">
+        </div>
+        <div class="form-group">
+          <label>Кого ищете / О себе</label>
+          <textarea id="in-about" rows="3" placeholder="Ищу +1 в стак на вечер, связь Discord..."></textarea>
+        </div>
+        <button type="button" class="btn btn-block" id="btn-save">Опубликовать для всех</button>
+        <button type="button" class="btn btn-danger btn-block" id="btn-delete" style="display: none;">Удалить мою анкету</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button type="button" class="nav-btn active" id="nav-feed"><span>Поиск</span></button>
+    <button type="button" class="nav-btn" id="nav-chats"><span>Диалоги</span></button>
+    <button type="button" class="nav-btn" id="nav-profile"><span>Профиль</span></button>
+  </nav>
+
+  <div class="chat-modal" id="chat-modal">
+    <div class="chat-top">
+      <button type="button" class="back-btn" id="btn-close-chat">← Назад</button>
+      <div style="font-weight: 700; font-size: 16px;" id="chat-title">Игрок</div>
+    </div>
+    <div class="chat-messages" id="chat-box"></div>
+    <div class="chat-bottom">
+      <input type="text" id="chat-input" placeholder="Введите сообщение...">
+      <button type="button" class="btn" id="btn-send">Отправить</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const SUPABASE_URL = "https://gvpjiadxwqcjrkwsnzka.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_s51L6_hl1Lnirc3Tq7TYKQ_-0zPA9JC";
+
+      let sbClient = null;
+      try {
+        if (window.supabase && typeof window.supabase.createClient === "function") {
+          sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: false }
+          });
+        }
+      } catch (e) {
+        console.error("Supabase init err:", e);
+      }
+
+      try {
+        if (window.Telegram && window.Telegram.WebApp) {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+        }
+      } catch (e) {}
+
+      function getMyUid() {
+        try {
+          const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+          if (tgId) return "tg_" + tgId;
+          let saved = localStorage.getItem("frs_uid");
+          if (!saved) {
+            saved = "u_" + Math.random().toString(36).substring(2, 10);
+            localStorage.setItem("frs_uid", saved);
+          }
+          return saved;
+        } catch (e) {
+          return "u_" + Math.random().toString(36).substring(2, 10);
+        }
+      }
+      const myUid = getMyUid();
+
+      let currentCategory = "Все";
+      let searchQuery = "";
+      let currentChatPartner = null;
+      let chatChannel = null;
+      let feedChannel = null;
+
+      function setDbStatus(state, errorMsg) {
+        const dot = document.getElementById("db-dot");
+        const alertBox = document.getElementById("sql-error-box");
+        const alertText = document.getElementById("sql-error-text");
+
+        if (state === "ok") {
+          dot.style.background = "#22c55e";
+          dot.style.boxShadow = "0 0 8px #22c55e";
+          alertBox.classList.remove("show");
+        } else {
+          dot.style.background = "#ef4444";
+          dot.style.boxShadow = "0 0 8px #ef4444";
+          if (errorMsg) {
+            alertText.textContent = "Причина: " + errorMsg;
+            alertBox.classList.add("show");
+          }
+        }
+      }
+
+      function notify(msg) {
+        const t = document.getElementById("toast");
+        if (!t) return;
+        t.textContent = msg;
+        t.classList.add("show");
+        clearTimeout(notify.timer);
+        notify.timer = setTimeout(() => t.classList.remove("show"), 3000);
+      }
+
+      function esc(str) {
+        return String(str || "").replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+      }
+
+      function openTab(tabName) {
+        ["feed", "chats", "profile"].forEach(t => {
+          const sec = document.getElementById("sec-" + t);
+          const btn = document.getElementById("nav-" + t);
+          if (sec) sec.classList.toggle("active", t === tabName);
+          if (btn) btn.classList.toggle("active", t === tabName);
+        });
+
+        const filterEl = document.getElementById("header-filters");
+        if (filterEl) filterEl.style.visibility = (tabName === "feed") ? "visible" : "hidden";
+
+        if (tabName === "feed") renderFeed();
+        if (tabName === "chats") renderChatsList();
+        if (tabName === "profile") loadMyProfile();
+      }
+
+      document.getElementById("nav-feed").addEventListener("click", () => openTab("feed"));
+      document.getElementById("nav-chats").addEventListener("click", () => openTab("chats"));
+      document.getElementById("nav-profile").addEventListener("click", () => openTab("profile"));
+
+      document.getElementById("cat-filter").addEventListener("change", (e) => {
+        currentCategory = e.target.value;
+        renderFeed();
+      });
+
+      document.getElementById("game-search").addEventListener("input", (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        renderFeed();
+      });
+
+      document.getElementById("btn-refresh").addEventListener("click", () => {
+        renderFeed();
+        notify("Список синхронизирован с сервером");
+      });
+
+      // 3. ЗАГРУЗКА ОБЩЕГО СПИСКА АНКЕТ ИЗ SUPABASE
+      async function renderFeed() {
+        const box = document.getElementById("feed-container");
+        if (!sbClient) {
+          box.innerHTML = `<div class="empty-box">Клиент Supabase не загружен. Проверьте подключение к интернету.</div>`;
+          return;
+        }
+
+        try {
+          let query = sbClient
+            .from("profiles")
+            .select("*");
+
+          if (currentCategory !== "Все") {
+            query = query.eq("category", currentCategory);
+          }
+
+          const { data, error } = await query;
+
+          if (error) {
+            setDbStatus("err", error.message + " (Код: " + error.code + ")");
+            box.innerHTML = `<div class="empty-box">Не удалось получить анкеты из базы.<br>Инструкция по исправлению показана выше ↑</div>`;
+            return;
+          }
+
+          setDbStatus("ok");
+
+          let list = Array.isArray(data) ? data : [];
+
+          // Сортируем на клиенте по updated_at или created_at (чтобы не падало, если какой-то колонки нет в БД)
+          list.sort((a, b) => {
+            const tA = new Date(a.updated_at || a.created_at || 0).getTime();
+            const tB = new Date(b.updated_at || b.created_at || 0).getTime();
+            return tB - tA;
+          });
+
+          if (searchQuery) {
+            list = list.filter(item =>
+              (item.game && item.game.toLowerCase().includes(searchQuery)) ||
+              (item.name && item.name.toLowerCase().includes(searchQuery)) ||
+              (item.about && item.about.toLowerCase().includes(searchQuery))
+            );
+          }
+
+          if (list.length === 0) {
+            box.innerHTML = `
+              <div class="empty-box">
+                В базе пока нет опубликованных анкет.<br>
+                Перейдите во вкладку <b>«Профиль»</b> и опубликуйте свою заявку!
+              </div>`;
+            return;
+          }
+
+          box.innerHTML = list.map(p => {
+            const isMe = p.id === myUid;
+            return `
+              <div class="mate-row">
+                <div class="avatar">${esc((p.name || "?")[0].toUpperCase())}</div>
+                <div class="mate-info">
+                  <div class="mate-title">
+                    <span>${esc(p.name)}${p.age ? ", " + esc(p.age) : ""} ${isMe ? "(Вы)" : ""}</span>
+                    <span class="badge">${esc(p.category || "Игры")}</span>
+                  </div>
+                  <div class="mate-desc"><b>${esc(p.game)}</b> — ${esc(p.about || "Ищу команду")}</div>
+                </div>
+                ${isMe 
+                  ? `<button type="button" class="btn btn-ghost" data-edit="1">Изменить</button>` 
+                  : `<button type="button" class="btn" data-chat-id="${esc(p.id)}" data-chat-name="${esc(p.name)}">Написать</button>`
+                }
+              </div>
+            `;
+          }).join("");
+
+        } catch (e) {
+          setDbStatus("err", e.message);
+          box.innerHTML = `<div class="empty-box">Ошибка соединения: ${esc(e.message)}</div>`;
+        }
+      }
+
+      // Автоматическое обновление ленты у всех игроков при добавлении/изменении любой анкеты
+      function subscribeFeedRealtime() {
+        if (!sbClient) return;
+        try {
+          feedChannel = sbClient
+            .channel("public_profiles_feed")
+            .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+              const feedSec = document.getElementById("sec-feed");
+              if (feedSec && feedSec.classList.contains("active")) {
+                renderFeed();
+              }
+            })
+            .subscribe();
+        } catch (e) {}
+      }
+
+      document.getElementById("feed-container").addEventListener("click", (e) => {
+        const editBtn = e.target.closest("[data-edit]");
+        if (editBtn) {
+          openTab("profile");
+          return;
+        }
+        const chatBtn = e.target.closest("[data-chat-id]");
+        if (chatBtn) {
+          openChatModal(chatBtn.getAttribute("data-chat-id"), chatBtn.getAttribute("data-chat-name"));
+        }
+      });
+
+      // 4. СОХРАНЕНИЕ АНКЕТЫ С ПРОВЕРКОЙ ЗАПИСИ НА СЕРВЕР
+      async function loadMyProfile() {
+        if (!sbClient) return;
+        try {
+          const { data, error } = await sbClient
+            .from("profiles")
+            .select("*")
+            .eq("id", myUid)
+            .maybeSingle();
+
+          if (error) {
+            setDbStatus("err", error.message);
+            return;
+          }
+
+          const delBtn = document.getElementById("btn-delete");
+          if (data) {
+            document.getElementById("in-name").value = data.name || "";
+            document.getElementById("in-age").value = data.age || "";
+            document.getElementById("in-cat").value = data.category || "Игры";
+            document.getElementById("in-game").value = data.game || "";
+            document.getElementById("in-about").value = data.about || "";
+            delBtn.style.display = "block";
+          } else {
+            delBtn.style.display = "none";
+          }
+        } catch (e) {}
+      }
+
+      document.getElementById("btn-save").addEventListener("click", async () => {
+        const saveBtn = document.getElementById("btn-save");
+        const name = document.getElementById("in-name").value.trim();
+        const age = parseInt(document.getElementById("in-age").value, 10) || 18;
+        const category = document.getElementById("in-cat").value;
+        const game = document.getElementById("in-game").value.trim();
+        const about = document.getElementById("in-about").value.trim() || "Ищу тиммейтов";
+
+        if (!name || !game) {
+          notify("Заполните никнейм и игру!");
+          return;
+        }
+
+        if (!sbClient) {
+          notify("Ошибка: нет связи с Supabase");
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Публикация на сервер...";
+
+        const payload = { id: myUid, name, age, category, game, about };
+
+        try {
+          // Используем .select() после upsert, чтобы убедиться, что строка реально сохранилась в БД Supabase!
+          const { data, error } = await sbClient
+            .from("profiles")
+            .upsert(payload, { onConflict: "id" })
+            .select();
+
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Опубликовать для всех";
+
+          if (error) {
+            setDbStatus("err", error.message + " (" + error.code + ")");
+            notify("Ошибка БД: " + error.message);
+            return;
+          }
+
+          if (!data || data.length === 0) {
+            setDbStatus("err", "Запись заблокирована политикой безопасности RLS (Row Level Security). Выполните SQL-скрипт выше.");
+            notify("БД отклонила запись (включен RLS)!");
+            return;
+          }
+
+          setDbStatus("ok");
+          notify("Анкета опубликована и видна всем!");
+          openTab("feed");
+        } catch (e) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Опубликовать для всех";
+          setDbStatus("err", e.message);
+          notify("Ошибка сети: " + e.message);
+        }
+      });
+
+      document.getElementById("btn-delete").addEventListener("click", async () => {
+        if (!sbClient) return;
+        const { error } = await sbClient.from("profiles").delete().eq("id", myUid);
+        if (error) {
+          notify("Ошибка удаления: " + error.message);
+          return;
+        }
+        document.getElementById("in-name").value = "";
+        document.getElementById("in-game").value = "";
+        document.getElementById("in-about").value = "";
+        document.getElementById("btn-delete").style.display = "none";
+        notify("Ваша анкета удалена");
+        openTab("feed");
+      });
+
+      // 5. ЧАТ И СООБЩЕНИЯ
+      async function openChatModal(partnerId, partnerName) {
+        currentChatPartner = { id: partnerId, name: partnerName };
+        document.getElementById("chat-title").textContent = partnerName || "Игрок";
+        document.getElementById("chat-modal").classList.add("open");
+        await loadConversation(partnerId);
+
+        if (sbClient) {
+          if (chatChannel) sbClient.removeChannel(chatChannel);
+          chatChannel = sbClient
+            .channel("room_" + partnerId)
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, payload => {
+              const m = payload.new;
+              if (!currentChatPartner) return;
+              const isRelevant =
+                (m.sender_id === myUid && m.receiver_id === currentChatPartner.id) ||
+                (m.sender_id === currentChatPartner.id && m.receiver_id === myUid);
+              if (isRelevant && m.sender_id !== myUid) {
+                appendBubble(m.content, false);
+              }
+            })
+            .subscribe();
+        }
+      }
+
+      document.getElementById("btn-close-chat").addEventListener("click", () => {
+        document.getElementById("chat-modal").classList.remove("open");
+        currentChatPartner = null;
+        if (sbClient && chatChannel) {
+          sbClient.removeChannel(chatChannel);
+          chatChannel = null;
+        }
+      });
+
+      async function loadConversation(partnerId) {
+        const box = document.getElementById("chat-box");
+        box.innerHTML = `<div class="empty-box">Загрузка переписки...</div>`;
+
+        if (!sbClient) return;
+
+        try {
+          const { data, error } = await sbClient
+            .from("messages")
+            .select("*")
+            .or(`and(sender_id.eq.${myUid},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${myUid})`)
+            .order("created_at", { ascending: true });
+
+          box.innerHTML = "";
+
+          if (error) {
+            box.innerHTML = `<div class="empty-box">Ошибка загрузки чата: ${esc(error.message)}</div>`;
+            return;
+          }
+
+          if (!data || data.length === 0) {
+            box.innerHTML = `<div class="empty-box">Сообщений пока нет. Напишите первым!</div>`;
+            return;
+          }
+
+          data.forEach(m => appendBubble(m.content, m.sender_id === myUid));
+        } catch (e) {
+          box.innerHTML = `<div class="empty-box">Ошибка соединения</div>`;
+        }
+      }
+
+      function appendBubble(text, isMe) {
+        const box = document.getElementById("chat-box");
+        const empty = box.querySelector(".empty-box");
+        if (empty) empty.remove();
+
+        const div = document.createElement("div");
+        div.className = "bubble " + (isMe ? "me" : "them");
+        div.textContent = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+      }
+
+      async function handleSend() {
+        const input = document.getElementById("chat-input");
+        const text = input.value.trim();
+        if (!text || !currentChatPartner || !sbClient) return;
+
+        input.value = "";
+        appendBubble(text, true);
+
+        const { error } = await sbClient.from("messages").insert({
+          sender_id: myUid,
+          receiver_id: currentChatPartner.id,
+          content: text
+        });
+
+        if (error) {
+          notify("Ошибка отправки: " + error.message);
+        }
+      }
+
+      document.getElementById("btn-send").addEventListener("click", handleSend);
+      document.getElementById("chat-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleSend();
+      });
+
+      // 6. ДИАЛОГИ
+      async function renderChatsList() {
+        const box = document.getElementById("chats-container");
+        if (!sbClient) return;
+
+        box.innerHTML = `<div class="empty-box">Загрузка диалогов...</div>`;
+
+        try {
+          const { data: msgs, error } = await sbClient
+            .from("messages")
+            .select("*")
+            .or(`sender_id.eq.${myUid},receiver_id.eq.${myUid}`)
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            box.innerHTML = `<div class="empty-box">Ошибка БД: ${esc(error.message)}</div>`;
+            return;
+          }
+
+          if (!msgs || msgs.length === 0) {
+            box.innerHTML = `<div class="empty-box">У вас пока нет активных переписок.</div>`;
+            return;
+          }
+
+          const partnersMap = new Map();
+          msgs.forEach(m => {
+            const pid = m.sender_id === myUid ? m.receiver_id : m.sender_id;
+            if (!partnersMap.has(pid)) {
+              partnersMap.set(pid, m.content);
+            }
+          });
+
+          const partnerIds = Array.from(partnersMap.keys());
+          const { data: profiles } = await sbClient
+            .from("profiles")
+            .select("id, name")
+            .in("id", partnerIds);
+
+          const nameLookup = {};
+          if (profiles) {
+            profiles.forEach(p => { nameLookup[p.id] = p.name; });
+          }
+
+          box.innerHTML = partnerIds.map(pid => {
+            const pName = nameLookup[pid] || "Игрок";
+            const lastMsg = partnersMap.get(pid) || "";
+            return `
+              <div class="mate-row" style="cursor: pointer;" data-open-id="${esc(pid)}" data-open-name="${esc(pName)}">
+                <div class="avatar">${esc(pName[0].toUpperCase())}</div>
+                <div class="mate-info">
+                  <div class="mate-title">${esc(pName)}</div>
+                  <div class="mate-desc">${esc(lastMsg)}</div>
+                </div>
+                <button type="button" class="btn">Открыть</button>
+              </div>
+            `;
+          }).join("");
+
+        } catch (e) {
+          box.innerHTML = `<div class="empty-box">Ошибка загрузки диалогов</div>`;
+        }
+      }
+
+      document.getElementById("chats-container").addEventListener("click", (e) => {
+        const row = e.target.closest("[data-open-id]");
+        if (row) {
+          openChatModal(row.getAttribute("data-open-id"), row.getAttribute("data-open-name"));
+        }
+      });
+
+      // Первичный запуск и подписка на живые обновления
+      renderFeed();
+      subscribeFeedRealtime();
+    })();
+  </script>
+</body>
+</html>
