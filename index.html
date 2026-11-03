@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FRSearch — Поиск тиммейтов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0b0d17;
+      --card-bg: rgba(22, 26, 46, 0.7);
+      --card-hover: rgba(30, 36, 64, 0.9);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: #6366f1;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient background gradient */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 15% 10%, rgba(99,102,241,0.18) 0%, transparent 40%),
+                  radial-gradient(circle at 85% 90%, rgba(139,92,246,0.15) 0%, transparent 45%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+    input, textarea, select {
+      width: 100%;
+      background: rgba(15, 18, 33, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    header {
+      padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      z-index: 5;
+    }
+    .brand { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+    .brand span { color: var(--accent); }
+
+    .cat-btn {
+      padding: 7px 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .cat-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    .views { flex: 1; position: relative; overflow: hidden; }
+    .view {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 14px 16px 90px;
+      display: none;
+    }
+    .view.active { display: block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Табличный / списочный вид вместо громоздких анкет */
+    .mate-list { display: flex; flex-direction: column; gap: 10px; }
+    .mate-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(10px);
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+    .mate-row:hover { background: var(--card-hover); border-color: rgba(99, 102, 241, 0.4); }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .mate-info { flex: 1; min-width: 0; }
+    .mate-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+    }
+    .mate-desc { font-size: 13px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .btn-act {
+      padding: 8px 14px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: opacity 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-act:active { transform: scale(0.96); }
+
+    /* Панель навигации */
+    .tabs {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(11, 13, 23, 0.85);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding-bottom: env(safe-area-inset-bottom);
+      z-index: 10;
+    }
+    .tab-btn {
+      padding: 14px 0 12px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+    .tab-btn.active { color: var(--accent); }
+
+    /* Окно чата */
+    #chat-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+    }
+    #chat-screen.on { display: flex; }
+    .chat-header {
+      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 18, 33, 0.8);
+    }
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .msg {
+      max-width: 75%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+    .msg.mine { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .msg.theirs { align-self: flex-start; background: rgba(255,255,255,0.08); border-bottom-left-radius: 4px; }
+
+    .chat-input-bar {
+      padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      background: rgba(11, 13, 23, 0.9);
+    }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    .btn-main {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px var(--accent-glow);
+    }
+    .empty-state { text-align: center; color: var(--text-muted); margin-top: 60px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">FR<span>Search</span></div>
+    <button class="cat-btn" id="cat-selector">Все категории</button>
+  </header>
+
+  <main class="views">
+    <!-- Список тиммейтов (Лента) -->
+    <section class="view active" id="view-feed">
+      <div class="mate-list" id="feed-list"></div>
+    </section>
+
+    <!-- Чаты -->
+    <section class="view" id="view-chats">
+      <div class="mate-list" id="chats-list"></div>
+    </section>
+
+    <!-- Профиль -->
+    <section class="view" id="view-profile">
+      <div style="max-width: 480px; margin: 0 auto;">
+        <div class="form-group">
+          <label>Никнейм</label>
+          <input type="text" id="prof-name" placeholder="Ваш никнейм" maxlength="30">
+        </div>
+        <div style="display: flex; gap: 10px;" class="form-group">
+          <div style="flex: 1;">
+            <label>Возраст</label>
+            <input type="number" id="prof-age" placeholder="18" min="12" max="99">
+          </div>
+          <div style="flex: 1;">
+            <label>Основная категория</label>
+            <select id="prof-cat">
+              <option>Игры</option>
+              <option>Киберспорт</option>
+              <option>Общение</option>
+              <option>Развлечение</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Игра / Дисциплина</label>
+          <input type="text" id="prof-game" placeholder="Например: CS2, Dota 2, Valorant" maxlength="40">
+        </div>
+        <div class="form-group">
+          <label>О себе / Кого вы ищете</label>
+          <textarea id="prof-about" rows="3" placeholder="Ищу тиммейта для регулярных каток..."></textarea>
+        </div>
+        <button class="btn-main" id="save-profile-btn">Сохранить данные</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="feed">Поиск</button>
+    <button class="tab-btn" data-tab="chats">Сообщения</button>
+    <button class="tab-btn" data-tab="profile">Профиль</button>
+  </nav>
+
+  <!-- Экран личных сообщений -->
+  <section id="chat-screen">
+    <div class="chat-header">
+      <button id="close-chat" style="font-size: 20px;">✕</button>
+      <div style="font-weight: 700;" id="chat-target-name">Диалог</div>
+    </div>
+    <div class="messages-area" id="chat-messages"></div>
+    <div class="chat-input-bar">
+      <input type="text" id="chat-input" placeholder="Написать сообщение...">
+      <button class="btn-act" id="send-btn">Отправить</button>
+    </div>
+  </section>
+
+  <script>
+    /* ========================================================
+       КОНФИГУРАЦИЯ SUPABASE
+       Замените URL и ANON_KEY на данные вашего проекта Supabase
+       ======================================================== */
+    const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+    const supabase = (SUPABASE_URL.indexOf("YOUR_PROJECT") === -1) 
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+      : null;
+
+    // Инициализация Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    try { tg?.ready(); tg?.expand(); } catch(e) {}
+
+    // Генерация / чтение ID текущего пользователя
+    const myUid = tg?.initDataUnsafe?.user?.id ? "tg_" + tg.initDataUnsafe.user.id
+      : (localStorage.getItem("app_uid") || (() => {
+          const id = "u_" + Math.random().toString(36).substring(2, 9);
+          localStorage.setItem("app_uid", id);
+          return id;
+        })());
+
+    let activeTab = "feed";
+    let activeChatWith = null;
+    let realtimeChannel = null;
+
+    // Навигация
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        btn.classList.add("active");
+        activeTab = btn.dataset.tab;
+        document.getElementById(`view-${activeTab}`).classList.add("active");
+        if (activeTab === "feed") loadFeed();
+        if (activeTab === "chats") loadDialogs();
+      };
+    });
+
+    // 1. Загрузка ленты тиммейтов
+    async function loadFeed() {
+      const container = document.getElementById("feed-list");
+      if (!supabase) {
+        container.innerHTML = `<div class="empty-state">Подключите Supabase для отображения списка игроков.</div>`;
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .neq("id", myUid)
+        .order("created_at", { ascending: false });
+
+      if (error || !data || data.length === 0) {
+        container.innerHTML = `<div class="empty-state">Игроки не найдены. Создайте свой профиль первым!</div>`;
+        return;
+      }
+
+      container.innerHTML = data.map(mate => `
+        <div class="mate-row">
+          <div class="avatar">${mate.name ? mate.name[0].toUpperCase() : "?"}</div>
+          <div class="mate-info">
+            <div class="mate-title">
+              <span>${mate.name}, ${mate.age || ""}</span>
+              <span class="badge">${mate.category || "Игры"}</span>
+            </div>
+            <div class="mate-desc"><b>${mate.game || ""}</b>: ${mate.about || ""}</div>
+          </div>
+          <button class="btn-act" onclick="openChat('${mate.id}', '${encodeURIComponent(mate.name)}')">Написать</button>
+        </div>
+      `).join("");
+    }
+
+    // 2. Сохранение профиля
+    document.getElementById("save-profile-btn").onclick = async () => {
+      const name = document.getElementById("prof-name").value.trim();
+      const age = parseInt(document.getElementById("prof-age").value, 10);
+      const category = document.getElementById("prof-cat").value;
+      const game = document.getElementById("prof-game").value.trim();
+      const about = document.getElementById("prof-about").value.trim();
+
+      if (!name || !game) return alert("Заполните никнейм и игру!");
+
+      if (supabase) {
+        const { error } = await supabase.from("profiles").upsert({
+          id: myUid,
+          name,
+          age,
+          category,
+          game,
+          about
+        });
+        if (!error) alert("Профиль сохранен!");
+        else alert("Ошибка при сохранении: " + error.message);
+      } else {
+        alert("Профиль сохранен локально (Supabase не настроен)");
+      }
+    };
+
+    // 3. Открытие чата и Realtime WebSocket подписка
+    function openChat(targetId, encodedName) {
+      activeChatWith = targetId;
+      document.getElementById("chat-target-name").innerText = decodeURIComponent(encodedName);
+      document.getElementById("chat-messages").innerHTML = "";
+      document.getElementById("chat-screen").classList.add("on");
+
+      loadChatMessages(targetId);
+
+      // Включение Realtime через Supabase Channels
+      if (supabase) {
+        if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+        realtimeChannel = supabase.channel(`chat_${targetId}`)
+          .on("postgres_changes", {
+            event: "INSERT",
+            schema: "public",
+            table: "messages"
+          }, payload => {
+            const msg = payload.new;
+            if ((msg.sender_id === myUid && msg.receiver_id === targetId) ||
+                (msg.sender_id === targetId && msg.receiver_id === myUid)) {
+              appendMessage(msg);
+            }
+          })
+          .subscribe();
+      }
+    }
+
+    async function loadChatMessages(targetId) {
+      if (!supabase) return;
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .or(`and(sender_id.eq.${myUid},receiver_id.eq.${targetId}),and(sender_id.eq.${targetId},receiver_id.eq.${myUid})`)
+        .order("created_at", { ascending: true });
+
+      const area = document.getElementById("chat-messages");
+      area.innerHTML = "";
+      if (data) data.forEach(appendMessage);
+    }
+
+    function appendMessage(msg) {
+      const area = document.getElementById("chat-messages");
+      const isMine = msg.sender_id === myUid;
+      const el = document.createElement("div");
+      el.className = `msg ${isMine ? "mine" : "theirs"}`;
+      el.textContent = msg.content;
+      area.appendChild(el);
+      area.scrollTop = area.scrollHeight;
+    }
+
+    // Отправка сообщения
+    async function sendMessage() {
+      const input = document.getElementById("chat-input");
+      const text = input.value.trim();
+      if (!text || !activeChatWith || !supabase) return;
+
+      input.value = "";
+      await supabase.from("messages").insert({
+        sender_id: myUid,
+        receiver_id: activeChatWith,
+        content: text
+      });
+    }
+
+    document.getElementById("send-btn").onclick = sendMessage;
+    document.getElementById("chat-input").onkeydown = e => { if (e.key === "Enter") sendMessage(); };
+    document.getElementById("close-chat").onclick = () => {
+      document.getElementById("chat-screen").classList.remove("on");
+      if (realtimeChannel && supabase) supabase.removeChannel(realtimeChannel);
+    };
+
+    // Загрузка активных диалогов
+    async function loadDialogs() {
+      const container = document.getElementById("chats-list");
+      if (!supabase) {
+        container.innerHTML = `<div class="empty-state">Подключите базу данных для загрузки переписок.</div>`;
+        return;
+      }
+      const { data } = await supabase
+        .from("messages")
+        .select("sender_id, receiver_id, content, created_at")
+        .or(`sender_id.eq.${myUid},receiver_id.eq.${myUid}`)
+        .order("created_at", { ascending: false });
+
+      if (!data || data.length === 0) {
+        container.innerHTML = `<div class="empty-state">Нет активных переписок.</div>`;
+        return;
+      }
+
+      // Группировка диалогов по собеседникам
+      const userMap = new Set();
+      data.forEach(m => {
+        const partner = m.sender_id === myUid ? m.receiver_id : m.sender_id;
+        userMap.add(partner);
+      });
+
+      const { data: profiles } = await supabase.from("profiles").select("*").in("id", Array.from(userMap));
+      if (!profiles) return;
+
+      container.innerHTML = profiles.map(p => `
+        <div class="mate-row" onclick="openChat('${p.id}', '${encodeURIComponent(p.name)}')">
+          <div class="avatar">${p.name[0].toUpperCase()}</div>
+          <div class="mate-info">
+            <div class="mate-title">${p.name}</div>
+            <div class="mate-desc">Нажмите, чтобы открыть диалог</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Инициализация профиля
+    (async () => {
+      if (!supabase) return;
+      const { data } = await supabase.from("profiles").select("*").eq("id", myUid).single();
+      if (data) {
+        document.getElementById("prof-name").value = data.name || "";
+        document.getElementById("prof-age").value = data.age || "";
+        document.getElementById("prof-cat").value = data.category || "Игры";
+        document.getElementById("prof-game").value = data.game || "";
+        document.getElementById("prof-about").value = data.about || "";
+      }
+      loadFeed();
+    })();
+  </script>
+</body>
+</html>
