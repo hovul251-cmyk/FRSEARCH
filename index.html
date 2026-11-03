@@ -3,1029 +3,1161 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0c16">
   <title>FRSearch — Поиск тиммейтов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg: #0b0d17;
-      --surface: #141829;
-      --surface-hover: #1c223a;
-      --border: #262d4d;
-      --accent: #6366f1;
-      --accent-hover: #818cf8;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --ok: #22c55e;
-      --err: #ef4444;
-      --warn: #eab308;
-      --radius: 14px;
+      --bg: #0a0c16;
+      --bg-2: #0f1220;
+      --surface: #151a2e;
+      --surface-2: #1b2139;
+      --border: #252c4a;
+      --border-2: #323b62;
+      --accent: #7c6cff;
+      --accent-2: #5b8cff;
+      --accent-soft: rgba(124, 108, 255, 0.14);
+      --text: #f4f6fb;
+      --text-2: #c3c9dc;
+      --muted: #8a93ad;
+      --ok: #34d399;
+      --err: #f87171;
+      --warn: #fbbf24;
+      --radius: 18px;
+      --radius-sm: 12px;
+      --nav-h: 64px;
+      --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+      --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     html, body {
       width: 100%;
-      height: 100%;
+      min-height: 100%;
       background: var(--bg);
       color: var(--text);
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
     }
 
     body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      background-image: 
-        radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.16) 0%, transparent 40%),
-        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.14) 0%, transparent 45%);
+      min-height: 100dvh;
+      background-image:
+        radial-gradient(600px 400px at 0% 0%, rgba(124, 108, 255, 0.16), transparent 60%),
+        radial-gradient(500px 400px at 100% 100%, rgba(91, 140, 255, 0.12), transparent 60%);
       background-attachment: fixed;
+      overscroll-behavior-y: none;
     }
 
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(11, 13, 23, 0.92);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
+    button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; touch-action: manipulation; }
+    svg { display: block; flex-shrink: 0; }
 
-    .brand {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    /* ---------- Header ---------- */
+    .app-header {
+      position: sticky; top: 0; z-index: 50;
+      padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+      background: rgba(10, 12, 22, 0.82);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(37, 44, 74, 0.6);
     }
-    .brand span { color: var(--accent); }
+    .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 640px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; letter-spacing: -0.03em; }
+    .brand-logo {
+      width: 34px; height: 34px; border-radius: 11px; background: var(--grad);
+      display: grid; place-items: center; box-shadow: 0 6px 18px -6px rgba(124, 108, 255, 0.8);
+    }
+    .brand b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .conn {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      padding: 6px 11px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border);
+    }
+    .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.18); transition: .3s; }
+    .conn.ok .conn-dot { background: var(--ok); box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18); }
+    .conn.err .conn-dot { background: var(--err); box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18); }
 
-    .status-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--warn);
-      box-shadow: 0 0 8px var(--warn);
-      transition: background 0.3s, box-shadow 0.3s;
-    }
+    /* ---------- Layout ---------- */
+    main { max-width: 640px; margin: 0 auto; padding: 14px 16px calc(var(--nav-h) + 28px + env(safe-area-inset-bottom)); }
+    .screen { display: none; animation: fade .22s ease; }
+    .screen.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .page-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 2px; }
+    .page-sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
 
-    .filter-select {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 99px;
-      padding: 7px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      outline: none;
+    /* ---------- Search & chips ---------- */
+    .search {
+      position: relative; margin-bottom: 12px;
     }
+    .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    .search input { padding-left: 42px; height: 46px; border-radius: 14px; background: var(--surface); }
 
-    main {
-      flex: 1;
-      padding: 16px 16px 96px;
-      max-width: 640px;
-      width: 100%;
-      margin: 0 auto;
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin: 0 -16px 14px; padding-inline: 16px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0; padding: 8px 14px; border-radius: 99px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-2); font-size: 13px; font-weight: 600; transition: .15s;
     }
+    .chip:active { transform: scale(0.96); }
+    .chip.active { background: var(--accent-soft); border-color: var(--accent); color: #fff; }
 
-    .screen-section { display: none; }
-    .screen-section.active { display: block; }
+    .list-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .link-btn { color: var(--accent); font-weight: 700; font-size: 12px; display: inline-flex; gap: 5px; align-items: center; }
 
-    /* Информационная плашка об ошибке настройки БД */
-    .sql-alert {
-      background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      border-radius: var(--radius);
-      padding: 14px;
-      margin-bottom: 14px;
-      font-size: 13px;
-      line-height: 1.45;
-      display: none;
-    }
-    .sql-alert.show { display: block; }
-    .sql-alert b { color: #fca5a5; }
-    .sql-alert pre {
-      background: #080a12;
-      padding: 10px;
-      border-radius: 8px;
-      overflow-x: auto;
-      margin-top: 8px;
-      font-size: 11px;
-      color: #cbd5e1;
-      border: 1px solid var(--border);
-    }
+    /* ---------- Cards ---------- */
+    .list { display: flex; flex-direction: column; gap: 10px; }
 
-    .search-bar {
-      margin-bottom: 12px;
-      display: flex;
-      gap: 8px;
+    .card {
+      background: linear-gradient(180deg, var(--surface), var(--bg-2));
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px; transition: border-color .2s, transform .15s;
     }
+    .card.me { border-color: rgba(124, 108, 255, 0.55); }
 
-    .mate-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .mate-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .mate-row:hover {
-      background: var(--surface-hover);
-      border-color: var(--accent);
-    }
-
+    .card-head { display: flex; gap: 12px; align-items: flex-start; }
     .avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 18px;
-      flex-shrink: 0;
-      color: #fff;
+      --h: 250;
+      width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+      display: grid; place-items: center; font-weight: 800; font-size: 18px; color: #fff;
+      background: linear-gradient(135deg, hsl(var(--h) 75% 58%), hsl(calc(var(--h) + 40) 70% 45%));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+    }
+    .avatar.sm { width: 38px; height: 38px; border-radius: 12px; font-size: 15px; }
+
+    .card-main { flex: 1; min-width: 0; }
+    .card-name { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px; }
+    .card-name .age { color: var(--muted); font-weight: 600; }
+    .you-tag { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; background: var(--grad); }
+    .card-game { color: #b7adff; font-weight: 700; font-size: 13px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-time { color: var(--muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+
+    .card-about {
+      color: var(--text-2); font-size: 13.5px; line-height: 1.45; margin-top: 10px;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;
     }
 
-    .mate-info { flex: 1; min-width: 0; }
-
-    .mate-title {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      font-weight: 700;
-      font-size: 15px;
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 8px;
+      background: rgba(255,255,255,0.05); color: var(--text-2); border: 1px solid var(--border);
     }
+    .tag.cat { background: var(--accent-soft); color: #c4bcff; border-color: transparent; }
 
-    .badge {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: rgba(99, 102, 241, 0.18);
-      color: #a5b4fc;
-    }
+    .card-actions { display: flex; gap: 8px; margin-top: 12px; }
 
-    .mate-desc {
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: 4px;
-      line-height: 1.35;
-      word-break: break-word;
-    }
-
+    /* ---------- Buttons ---------- */
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--accent);
-      color: #fff;
-      font-weight: 700;
-      font-size: 13px;
-      padding: 10px 16px;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      touch-action: manipulation;
-      user-select: none;
-      transition: transform 0.1s, background 0.2s, opacity 0.2s;
-      flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      height: 40px; padding: 0 16px; border-radius: 12px;
+      background: var(--grad); color: #fff; font-weight: 700; font-size: 13px;
+      transition: transform .1s, opacity .2s, filter .2s; user-select: none;
     }
-    .btn:hover { background: var(--accent-hover); }
-    .btn:active { transform: scale(0.95); }
-    .btn:disabled { opacity: 0.5; pointer-events: none; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: .5; pointer-events: none; }
+    .btn.flex { flex: 1; }
+    .btn.ghost { background: var(--surface-2); border: 1px solid var(--border-2); color: var(--text); }
+    .btn.danger { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.3); color: #fca5a5; }
+    .btn.block { width: 100%; height: 50px; font-size: 15px; border-radius: 14px; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); }
 
-    .btn-ghost {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
+    /* ---------- Chats list ---------- */
+    .chat-row {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px; width: 100%; text-align: left;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      transition: background .15s;
     }
-    .btn-ghost:hover { border-color: var(--accent); background: var(--surface-hover); }
-
-    .btn-danger {
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
-      border: 1px solid rgba(239, 68, 68, 0.3);
+    .chat-row:active { background: var(--surface-2); }
+    .chat-row .card-main { display: flex; flex-direction: column; gap: 3px; }
+    .chat-line { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .chat-preview { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-preview .from-me { color: var(--text-2); }
+    .chat-row.unread .chat-preview { color: var(--text); font-weight: 600; }
+    .count {
+      min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px;
+      background: var(--grad); color: #fff; font-size: 11px; font-weight: 800;
+      display: inline-grid; place-items: center;
     }
 
-    .btn-block {
-      width: 100%;
-      padding: 14px;
-      font-size: 15px;
-      border-radius: 12px;
-      margin-top: 8px;
+    /* ---------- Forms ---------- */
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .field { margin-bottom: 14px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label, .label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 7px; }
+    .counter { font-weight: 600; }
+    input, textarea {
+      width: 100%; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 12px 13px; font: inherit; font-size: 15px; outline: none; transition: border-color .15s, box-shadow .15s;
     }
+    input::placeholder, textarea::placeholder { color: #5c6582; }
+    input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    textarea { resize: none; line-height: 1.45; }
+    .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+    .seg .chip { padding: 8px 12px; font-size: 12.5px; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 6px; }
+    .preview-label { font-size: 12px; font-weight: 700; color: var(--muted); margin: 18px 0 8px; text-transform: uppercase; letter-spacing: .06em; }
 
-    .form-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
+    /* ---------- Empty & skeleton ---------- */
+    .empty {
+      text-align: center; padding: 40px 20px; border-radius: var(--radius);
+      background: var(--surface); border: 1px dashed var(--border-2);
     }
+    .empty-icon { width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 14px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+    .empty h4 { font-size: 16px; margin-bottom: 6px; }
+    .empty p { color: var(--muted); font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+    .empty p:last-child { margin-bottom: 0; }
 
-    .form-group { margin-bottom: 14px; }
-
-    label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 6px;
+    .skel { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); height: 128px; }
+    .skel::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent);
+      animation: shimmer 1.3s infinite; transform: translateX(-100%);
     }
+    @keyframes shimmer { to { transform: translateX(100%); } }
 
-    input, textarea, select {
-      width: 100%;
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      font: inherit;
-      font-size: 14px;
-      outline: none;
+    /* ---------- Setup box ---------- */
+    .setup { border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.06); margin-bottom: 14px; display: none; }
+    .setup.show { display: block; }
+    .setup h4 { color: #fecaca; font-size: 15px; margin-bottom: 8px; }
+    .setup ol { padding-left: 18px; color: var(--text-2); line-height: 1.6; font-size: 13px; }
+    .setup code { background: var(--bg); padding: 1px 6px; border-radius: 6px; font-size: 12px; color: #c4bcff; }
+    .setup .reason { margin-top: 10px; font-size: 12px; color: #fca5a5; word-break: break-word; }
+
+    /* ---------- Bottom nav ---------- */
+    .nav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+      background: rgba(12, 14, 26, 0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(37, 44, 74, 0.7);
     }
-    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
-
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: rgba(14, 17, 30, 0.96);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid var(--border);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-
+    .nav-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .nav-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      padding: 14px 8px;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      touch-action: manipulation;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      transition: color 0.15s;
+      position: relative; height: 48px; border-radius: 14px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      color: var(--muted); font-size: 11px; font-weight: 700; transition: .15s;
     }
-    .nav-btn.active { color: var(--accent); }
+    .nav-btn.active { color: #fff; background: var(--accent-soft); }
+    .nav-btn.active svg { color: var(--accent); }
+    .nav-badge { position: absolute; top: 4px; left: calc(50% + 6px); }
+    .nav-badge[hidden] { display: none; }
 
-    .chat-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 200;
-      background: var(--bg);
-      display: none;
-      flex-direction: column;
+    /* ---------- Chat ---------- */
+    .chat {
+      position: fixed; inset: 0; z-index: 200; background: var(--bg);
+      display: none; flex-direction: column; height: 100dvh;
     }
-    .chat-modal.open { display: flex; }
-
+    .chat.open { display: flex; animation: slide .22s ease; }
+    @keyframes slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
     .chat-top {
-      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      display: flex; align-items: center; gap: 12px;
+      padding: max(12px, env(safe-area-inset-top)) 14px 12px;
+      background: rgba(15, 18, 32, .95); border-bottom: 1px solid var(--border);
     }
-
-    .back-btn {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
+    .chat-top .card-main { line-height: 1.25; }
+    .chat-top .sub { color: var(--muted); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-body { flex: 1; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 4px; }
+    .day { align-self: center; margin: 10px 0 6px; font-size: 11px; font-weight: 700; color: var(--muted); padding: 4px 10px; border-radius: 99px; background: var(--surface); }
+    .msg {
+      max-width: 80%; padding: 9px 12px 7px; border-radius: 18px; font-size: 14.5px; line-height: 1.4;
+      word-break: break-word; white-space: pre-wrap; position: relative;
     }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .bubble {
-      max-width: 78%;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.4;
-      word-break: break-word;
-    }
-    .bubble.me {
-      align-self: flex-end;
-      background: var(--accent);
-      color: #fff;
-      border-bottom-right-radius: 4px;
-    }
-    .bubble.them {
-      align-self: flex-start;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-bottom-left-radius: 4px;
-    }
-
+    .msg .t { display: inline-block; margin-left: 8px; font-size: 10.5px; opacity: .65; vertical-align: bottom; transform: translateY(2px); }
+    .msg.me { align-self: flex-end; background: var(--grad); color: #fff; border-bottom-right-radius: 6px; }
+    .msg.them { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
+    .msg + .msg.me, .msg + .msg.them { margin-top: 2px; }
+    .msg.me + .msg.them, .msg.them + .msg.me { margin-top: 8px; }
+    .msg.pending { opacity: .6; }
+    .msg.failed { background: rgba(248,113,113,.2); border: 1px solid rgba(248,113,113,.5); }
     .chat-bottom {
-      padding: 12px 16px max(12px, env(safe-area-inset-bottom));
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: 8px;
+      display: flex; gap: 8px; align-items: flex-end;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(15, 18, 32, .95); border-top: 1px solid var(--border);
     }
+    .chat-bottom textarea { min-height: 44px; max-height: 130px; border-radius: 22px; padding: 11px 16px; font-size: 15px; }
+    .send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; flex-shrink: 0; transition: .15s; }
+    .send-btn:disabled { opacity: .4; }
+    .chat-empty { margin: auto; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.5; padding: 20px; }
 
-    #toast {
-      position: fixed;
-      top: 18px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-100px);
-      background: var(--accent);
-      color: #fff;
-      padding: 10px 18px;
-      border-radius: 99px;
-      font-size: 13px;
-      font-weight: 700;
-      z-index: 999;
-      transition: transform 0.25s ease;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-      pointer-events: none;
-      max-width: 92%;
-      text-align: center;
+    /* ---------- Toast ---------- */
+    .toast {
+      position: fixed; left: 50%; top: max(14px, env(safe-area-inset-top)); z-index: 999;
+      transform: translate(-50%, -140%); transition: transform .28s cubic-bezier(.2,.9,.3,1.2);
+      max-width: calc(100% - 32px); padding: 11px 16px; border-radius: 14px;
+      background: var(--surface-2); border: 1px solid var(--border-2); box-shadow: var(--shadow);
+      font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 9px; pointer-events: none;
     }
-    #toast.show { transform: translateX(-50%) translateY(0); }
-
-    .empty-box {
-      text-align: center;
-      color: var(--muted);
-      padding: 36px 16px;
-      font-size: 14px;
-      background: var(--surface);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      line-height: 1.5;
-    }
+    .toast.show { transform: translate(-50%, 0); }
+    .toast::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .toast.ok::before { background: var(--ok); }
+    .toast.err::before { background: var(--err); }
   </style>
 </head>
 <body>
 
-  <div id="toast">Уведомление</div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <header>
-    <div class="brand">
-      <div class="status-dot" id="db-dot" title="Статус подключения к Supabase"></div>
-      FR<span>Search</span>
-    </div>
-    <div class="header-actions" id="header-filters">
-      <select class="filter-select" id="cat-filter">
-        <option value="Все">Все категории</option>
-        <option value="Игры">Игры</option>
-        <option value="Киберспорт">Киберспорт</option>
-        <option value="Общение">Общение</option>
-        <option value="Развлечение">Развлечение</option>
-      </select>
+  <header class="app-header">
+    <div class="header-row">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </div>
+        <span>FR<b>Search</b></span>
+      </div>
+      <div class="conn" id="conn"><span class="conn-dot"></span><span id="conn-text">Подключение</span></div>
     </div>
   </header>
 
   <main>
-    <!-- Блок диагностики ошибок БД / RLS -->
-    <div class="sql-alert" id="sql-error-box">
-      <b>База данных Supabase блокирует запись или таблица не создана!</b><br>
-      <span id="sql-error-text"></span><br>
-      Чтобы анкеты сохранялись и были видны всем пользователям, откройте <b>SQL Editor</b> в панели Supabase, вставьте этот код и нажмите <b>Run</b>:
-      <pre id="sql-snippet">create table if not exists public.profiles (
-  id text primary key,
-  name text not null,
-  age int default 18,
-  category text default 'Игры',
-  game text not null,
-  about text default '',
-  updated_at timestamptz default now(),
-  created_at timestamptz default now()
-);
-
-create table if not exists public.messages (
-  id uuid default gen_random_uuid() primary key,
-  sender_id text not null,
-  receiver_id text not null,
-  content text not null,
-  created_at timestamptz default now()
-);
-
--- Отключаем блокировку RLS, чтобы анкеты были видны всем:
-alter table public.profiles disable row level security;
-alter table public.messages disable row level security;
-
--- Даем полные права публичному ключу (anon):
-grant all on table public.profiles to anon, authenticated;
-grant all on table public.messages to anon, authenticated;</pre>
+    <div class="panel setup" id="setup">
+      <h4>Нужна настройка Supabase</h4>
+      <ol>
+        <li>Authentication → Sign In / Providers → включите <b>Allow anonymous sign-ins</b>.</li>
+        <li>SQL Editor → вставьте файл <code>schema.sql</code> целиком → <b>Run</b>.</li>
+        <li>Перезапустите приложение.</li>
+      </ol>
+      <div class="reason" id="setup-reason"></div>
     </div>
 
-    <!-- 1. Вкладка: Поиск тиммейтов -->
-    <section id="sec-feed" class="screen-section active">
-      <div class="search-bar">
-        <input type="text" id="game-search" placeholder="Поиск по игре или никнейму...">
-        <button type="button" class="btn btn-ghost" id="btn-refresh">Обновить</button>
+    <!-- Лента -->
+    <section class="screen active" id="screen-feed">
+      <h1 class="page-title">Найди тиммейта</h1>
+      <p class="page-sub">Свежие анкеты игроков — напиши тому, кто подходит</p>
+
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="search" placeholder="Игра, никнейм или описание" autocomplete="off">
       </div>
-      <div class="mate-list" id="feed-container"></div>
+
+      <div class="chips" id="cat-chips"></div>
+
+      <div class="list-meta">
+        <span id="feed-count"></span>
+        <button class="link-btn" id="btn-refresh" type="button">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+          Обновить
+        </button>
+      </div>
+
+      <div class="list" id="feed"></div>
     </section>
 
-    <!-- 2. Вкладка: Диалоги -->
-    <section id="sec-chats" class="screen-section">
-      <div class="mate-list" id="chats-container"></div>
+    <!-- Диалоги -->
+    <section class="screen" id="screen-chats">
+      <h1 class="page-title">Диалоги</h1>
+      <p class="page-sub">Переписки с игроками</p>
+      <div class="list" id="chats"></div>
     </section>
 
-    <!-- 3. Вкладка: Профиль -->
-    <section id="sec-profile" class="screen-section">
-      <div class="form-card">
-        <h3 style="margin-bottom: 14px; font-size: 17px;">Моя анкета</h3>
-        <div class="form-group">
-          <label>Ваш никнейм *</label>
-          <input type="text" id="in-name" placeholder="Например: Shadow" maxlength="30">
+    <!-- Профиль -->
+    <section class="screen" id="screen-profile">
+      <h1 class="page-title">Моя анкета</h1>
+      <p class="page-sub">Её увидят все игроки в ленте</p>
+
+      <form class="panel" id="profile-form" novalidate>
+        <div class="field">
+          <label for="f-name">Никнейм <span class="counter" data-for="f-name"></span></label>
+          <input id="f-name" maxlength="30" placeholder="Например: Shadow" autocomplete="off">
         </div>
-        <div style="display: flex; gap: 10px;" class="form-group">
-          <div style="flex: 1;">
-            <label>Возраст</label>
-            <input type="number" id="in-age" placeholder="18" min="12" max="99">
+        <div class="field-row field">
+          <div>
+            <label for="f-age">Возраст</label>
+            <input id="f-age" type="number" inputmode="numeric" min="12" max="99" placeholder="18">
           </div>
-          <div style="flex: 1;">
-            <label>Категория</label>
-            <select id="in-cat">
-              <option value="Игры">Игры</option>
-              <option value="Киберспорт">Киберспорт</option>
-              <option value="Общение">Общение</option>
-              <option value="Развлечение">Развлечение</option>
-            </select>
+          <div>
+            <label for="f-game">Игра *</label>
+            <input id="f-game" maxlength="40" placeholder="CS2, Dota 2…" autocomplete="off">
           </div>
         </div>
-        <div class="form-group">
-          <label>Игра / Дисциплина *</label>
-          <input type="text" id="in-game" placeholder="CS2, Dota 2, Valorant..." maxlength="40">
+        <div class="field">
+          <div class="label">Пол *</div>
+          <div class="seg" id="f-gender"></div>
         </div>
-        <div class="form-group">
-          <label>Кого ищете / О себе</label>
-          <textarea id="in-about" rows="3" placeholder="Ищу +1 в стак на вечер, связь Discord..."></textarea>
+        <div class="field">
+          <div class="label">Категория</div>
+          <div class="seg" id="f-category"></div>
         </div>
-        <button type="button" class="btn btn-block" id="btn-save">Опубликовать для всех</button>
-        <button type="button" class="btn btn-danger btn-block" id="btn-delete" style="display: none;">Удалить мою анкету</button>
-      </div>
+        <div class="field">
+          <div class="label">Платформа</div>
+          <div class="seg" id="f-platform"></div>
+        </div>
+        <div class="field">
+          <label for="f-about">Кого ищете / о себе <span class="counter" data-for="f-about"></span></label>
+          <textarea id="f-about" rows="3" maxlength="300" placeholder="Ищу +1 в стак на вечер, ранг Gold, есть микрофон"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-contact">Контакт (необязательно) <span class="counter" data-for="f-contact"></span></label>
+          <input id="f-contact" maxlength="60" placeholder="Discord: shadow#1234 или @telegram" autocomplete="off">
+          <p class="hint">Виден всем в ленте. Можно не указывать — вам напишут во встроенный чат.</p>
+        </div>
+
+        <button type="submit" class="btn block" id="btn-save">Опубликовать анкету</button>
+        <button type="button" class="btn danger block" id="btn-delete" style="margin-top:8px" hidden>Удалить анкету</button>
+      </form>
+
+      <div class="preview-label">Так анкету видят другие</div>
+      <div id="preview"></div>
     </section>
   </main>
 
-  <nav class="bottom-nav">
-    <button type="button" class="nav-btn active" id="nav-feed"><span>Поиск</span></button>
-    <button type="button" class="nav-btn" id="nav-chats"><span>Диалоги</span></button>
-    <button type="button" class="nav-btn" id="nav-profile"><span>Профиль</span></button>
+  <nav class="nav">
+    <div class="nav-inner">
+      <button class="nav-btn active" data-tab="feed" type="button">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M16 3.5a4 4 0 0 1 0 9"/><path d="M22 21c0-3-1.8-5.5-4.5-6.5"/></svg>
+        Поиск
+      </button>
+      <button class="nav-btn" data-tab="chats" type="button">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L3 21l2-6.2A8 8 0 1 1 21 12z"/></svg>
+        Диалоги
+        <span class="count nav-badge" id="nav-badge" hidden>0</span>
+      </button>
+      <button class="nav-btn" data-tab="profile" type="button">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        Профиль
+      </button>
+    </div>
   </nav>
 
-  <div class="chat-modal" id="chat-modal">
+  <div class="chat" id="chat" aria-modal="true" role="dialog">
     <div class="chat-top">
-      <button type="button" class="back-btn" id="btn-close-chat">← Назад</button>
-      <div style="font-weight: 700; font-size: 16px;" id="chat-title">Игрок</div>
+      <button class="icon-btn" id="chat-back" type="button" aria-label="Назад">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div id="chat-avatar"></div>
+      <div class="card-main">
+        <div class="card-name" id="chat-name">Игрок</div>
+        <div class="sub" id="chat-sub"></div>
+      </div>
     </div>
-    <div class="chat-messages" id="chat-box"></div>
-    <div class="chat-bottom">
-      <input type="text" id="chat-input" placeholder="Введите сообщение...">
-      <button type="button" class="btn" id="btn-send">Отправить</button>
-    </div>
+    <div class="chat-body" id="chat-body"></div>
+    <form class="chat-bottom" id="chat-form">
+      <textarea id="chat-input" rows="1" maxlength="2000" placeholder="Сообщение…"></textarea>
+      <button class="send-btn" id="chat-send" type="submit" aria-label="Отправить" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+    </form>
   </div>
 
   <script>
-    (function() {
-      const SUPABASE_URL = "https://gvpjiadxwqcjrkwsnzka.supabase.co";
-      const SUPABASE_KEY = "sb_publishable_s51L6_hl1Lnirc3Tq7TYKQ_-0zPA9JC";
+  (() => {
+    'use strict';
 
-      let sbClient = null;
+    // ================= Конфигурация =================
+    const CONFIG = {
+      SUPABASE_URL: 'https://gvpjiadxwqcjrkwsnzka.supabase.co',
+      SUPABASE_KEY: 'sb_publishable_s51L6_hl1Lnirc3Tq7TYKQ_-0zPA9JC',
+      CATEGORIES: ['Игры', 'Киберспорт', 'Общение', 'Развлечение'],
+      PLATFORMS: ['PC', 'PlayStation', 'Xbox', 'Mobile', 'Switch'],
+      GENDERS: ['Мужской', 'Женский'],
+      FEED_LIMIT: 100,
+      CHAT_LIMIT: 200,
+    };
+
+    const tg = window.Telegram?.WebApp;
+    const $ = (sel) => document.querySelector(sel);
+
+    const state = {
+      sb: null,
+      uid: null,
+      me: null,              // моя анкета или null
+      tab: 'feed',
+      category: 'Все',
+      query: '',
+      feed: [],              // загруженные анкеты
+      chat: null,            // { id, name, game }
+      unread: 0,
+      form: { category: 'Игры', platform: 'PC', gender: null },
+    };
+
+    // ================= Утилиты =================
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+    function hue(str) {
+      let h = 0;
+      for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) | 0;
+      return Math.abs(h) % 360;
+    }
+
+    function avatar(name, id, small) {
+      const letter = (String(name || '?').trim()[0] || '?').toUpperCase();
+      return `<div class="avatar${small ? ' sm' : ''}" style="--h:${hue(id || name)}">${esc(letter)}</div>`;
+    }
+
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+      if (s < 60) return 'только что';
+      if (s < 3600) return Math.floor(s / 60) + ' мин';
+      if (s < 86400) return Math.floor(s / 3600) + ' ч';
+      if (s < 86400 * 7) return Math.floor(s / 86400) + ' дн';
+      return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+
+    const fmtTime = (iso) => new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+    function fmtDay(iso) {
+      const d = new Date(iso), today = new Date();
+      const yest = new Date(); yest.setDate(today.getDate() - 1);
+      if (d.toDateString() === today.toDateString()) return 'Сегодня';
+      if (d.toDateString() === yest.toDateString()) return 'Вчера';
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    }
+
+    function haptic(kind = 'light') {
       try {
-        if (window.supabase && typeof window.supabase.createClient === "function") {
-          sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: { persistSession: false }
-          });
-        }
-      } catch (e) {
-        console.error("Supabase init err:", e);
-      }
+        const h = tg?.HapticFeedback;
+        if (!h) return;
+        if (kind === 'success' || kind === 'error' || kind === 'warning') h.notificationOccurred(kind);
+        else if (kind === 'select') h.selectionChanged();
+        else h.impactOccurred(kind);
+      } catch (_) {}
+    }
 
-      try {
-        if (window.Telegram && window.Telegram.WebApp) {
-          window.Telegram.WebApp.ready();
-          window.Telegram.WebApp.expand();
-        }
-      } catch (e) {}
+    function toast(msg, kind = '') {
+      const el = $('#toast');
+      el.textContent = msg;
+      el.className = 'toast show ' + kind;
+      clearTimeout(toast.t);
+      toast.t = setTimeout(() => el.classList.remove('show'), 2800);
+    }
 
-      function getMyUid() {
+    function confirmDialog(text) {
+      return new Promise((resolve) => {
         try {
-          const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-          if (tgId) return "tg_" + tgId;
-          let saved = localStorage.getItem("frs_uid");
-          if (!saved) {
-            saved = "u_" + Math.random().toString(36).substring(2, 10);
-            localStorage.setItem("frs_uid", saved);
-          }
-          return saved;
-        } catch (e) {
-          return "u_" + Math.random().toString(36).substring(2, 10);
-        }
+          if (tg?.showConfirm && tg.isVersionAtLeast?.('6.2')) return tg.showConfirm(text, resolve);
+        } catch (_) {}
+        resolve(window.confirm(text));
+      });
+    }
+
+    function setConn(status) {
+      const el = $('#conn');
+      el.classList.remove('ok', 'err');
+      if (status === 'ok') { el.classList.add('ok'); $('#conn-text').textContent = 'Онлайн'; }
+      else if (status === 'err') { el.classList.add('err'); $('#conn-text').textContent = 'Нет связи'; }
+      else $('#conn-text').textContent = 'Подключение';
+    }
+
+    const SETUP_CODES = new Set(['42P01', 'PGRST205', 'PGRST202', '42883', '42501', '42703']);
+    function isSetupError(err) {
+      if (!err) return false;
+      const m = String(err.message || '').toLowerCase();
+      return SETUP_CODES.has(err.code) || m.includes('anonymous') || m.includes('does not exist') || m.includes('schema cache');
+    }
+
+    function handleError(err, fallbackMsg) {
+      console.error(err);
+      if (isSetupError(err)) {
+        $('#setup').classList.add('show');
+        $('#setup-reason').textContent = 'Причина: ' + (err.message || err) + (err.code ? ` (${err.code})` : '');
+        setConn('err');
       }
-      const myUid = getMyUid();
+      toast(fallbackMsg || err.message || 'Ошибка', 'err');
+      haptic('error');
+    }
 
-      let currentCategory = "Все";
-      let searchQuery = "";
-      let currentChatPartner = null;
-      let chatChannel = null;
-      let feedChannel = null;
+    const emptyState = (icon, title, text, btn) => `
+      <div class="empty">
+        <div class="empty-icon">${icon}</div>
+        <h4>${title}</h4>
+        <p>${text}</p>
+        ${btn || ''}
+      </div>`;
 
-      function setDbStatus(state, errorMsg) {
-        const dot = document.getElementById("db-dot");
-        const alertBox = document.getElementById("sql-error-box");
-        const alertText = document.getElementById("sql-error-text");
+    const ICONS = {
+      users: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M19 8v6M16 11h6"/></svg>',
+      chat: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a8 8 0 0 1-11.8 7L3 21l2-6.2A8 8 0 1 1 21 12z"/></svg>',
+      search: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+      send: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L3 21l2-6.2A8 8 0 1 1 21 12z"/></svg>',
+      edit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+      game: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>',
+      link: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
+    };
 
-        if (state === "ok") {
-          dot.style.background = "#22c55e";
-          dot.style.boxShadow = "0 0 8px #22c55e";
-          alertBox.classList.remove("show");
-        } else {
-          dot.style.background = "#ef4444";
-          dot.style.boxShadow = "0 0 8px #ef4444";
-          if (errorMsg) {
-            alertText.textContent = "Причина: " + errorMsg;
-            alertBox.classList.add("show");
-          }
-        }
-      }
-
-      function notify(msg) {
-        const t = document.getElementById("toast");
-        if (!t) return;
-        t.textContent = msg;
-        t.classList.add("show");
-        clearTimeout(notify.timer);
-        notify.timer = setTimeout(() => t.classList.remove("show"), 3000);
-      }
-
-      function esc(str) {
-        return String(str || "").replace(/[&<>"']/g, m => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[m]));
-      }
-
-      function openTab(tabName) {
-        ["feed", "chats", "profile"].forEach(t => {
-          const sec = document.getElementById("sec-" + t);
-          const btn = document.getElementById("nav-" + t);
-          if (sec) sec.classList.toggle("active", t === tabName);
-          if (btn) btn.classList.toggle("active", t === tabName);
+    // ================= Data layer =================
+    const api = {
+      async signIn() {
+        const { data: { session } } = await state.sb.auth.getSession();
+        if (session?.user) return session.user;
+        const tgUser = tg?.initDataUnsafe?.user;
+        const { data, error } = await state.sb.auth.signInAnonymously({
+          options: { data: { tg_id: tgUser?.id ?? null, tg_username: tgUser?.username ?? null } },
         });
+        if (error) throw error;
+        return data.user;
+      },
 
-        const filterEl = document.getElementById("header-filters");
-        if (filterEl) filterEl.style.visibility = (tabName === "feed") ? "visible" : "hidden";
+      async feed(category) {
+        let q = state.sb.from('profiles').select('*').order('updated_at', { ascending: false }).limit(CONFIG.FEED_LIMIT);
+        if (category !== 'Все') q = q.eq('category', category);
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      },
 
-        if (tabName === "feed") renderFeed();
-        if (tabName === "chats") renderChatsList();
-        if (tabName === "profile") loadMyProfile();
-      }
+      async myProfile() {
+        const { data, error } = await state.sb.from('profiles').select('*').eq('id', state.uid).maybeSingle();
+        if (error) throw error;
+        return data;
+      },
 
-      document.getElementById("nav-feed").addEventListener("click", () => openTab("feed"));
-      document.getElementById("nav-chats").addEventListener("click", () => openTab("chats"));
-      document.getElementById("nav-profile").addEventListener("click", () => openTab("profile"));
+      async saveProfile(payload) {
+        const { data, error } = await state.sb.from('profiles')
+          .upsert({ ...payload, id: state.uid }, { onConflict: 'id' })
+          .select().single();
+        if (error) throw error;
+        return data;
+      },
 
-      document.getElementById("cat-filter").addEventListener("change", (e) => {
-        currentCategory = e.target.value;
-        renderFeed();
-      });
+      async deleteProfile() {
+        const { error } = await state.sb.from('profiles').delete().eq('id', state.uid);
+        if (error) throw error;
+      },
 
-      document.getElementById("game-search").addEventListener("input", (e) => {
-        searchQuery = e.target.value.trim().toLowerCase();
-        renderFeed();
-      });
+      async profile(id) {
+        const { data } = await state.sb.from('profiles').select('id,name,game,platform').eq('id', id).maybeSingle();
+        return data;
+      },
 
-      document.getElementById("btn-refresh").addEventListener("click", () => {
-        renderFeed();
-        notify("Список синхронизирован с сервером");
-      });
+      async conversation(partnerId) {
+        const me = state.uid;
+        const { data, error } = await state.sb.from('messages')
+          .select('id,sender_id,receiver_id,content,created_at,read_at')
+          .or(`and(sender_id.eq.${me},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${me})`)
+          .order('created_at', { ascending: false })
+          .limit(CONFIG.CHAT_LIMIT);
+        if (error) throw error;
+        return (data || []).reverse();
+      },
 
-      // 3. ЗАГРУЗКА ОБЩЕГО СПИСКА АНКЕТ ИЗ SUPABASE
-      async function renderFeed() {
-        const box = document.getElementById("feed-container");
-        if (!sbClient) {
-          box.innerHTML = `<div class="empty-box">Клиент Supabase не загружен. Проверьте подключение к интернету.</div>`;
-          return;
-        }
+      async send(receiverId, content) {
+        const { data, error } = await state.sb.from('messages')
+          .insert({ sender_id: state.uid, receiver_id: receiverId, content })
+          .select().single();
+        if (error) throw error;
+        return data;
+      },
 
-        try {
-          let query = sbClient
-            .from("profiles")
-            .select("*");
+      async conversations() {
+        const { data, error } = await state.sb.rpc('get_conversations');
+        if (error) throw error;
+        return data || [];
+      },
 
-          if (currentCategory !== "Все") {
-            query = query.eq("category", currentCategory);
-          }
+      async markRead(partnerId) {
+        const { error } = await state.sb.rpc('mark_read', { p_partner: partnerId });
+        if (error) console.warn('mark_read', error);
+      },
+    };
 
-          const { data, error } = await query;
+    // ================= Навигация =================
+    function openTab(tab) {
+      state.tab = tab;
+      document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === 'screen-' + tab));
+      document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+      window.scrollTo({ top: 0 });
+      if (!state.uid) return;
+      if (tab === 'feed') loadFeed();
+      if (tab === 'chats') loadChats();
+      if (tab === 'profile') fillForm();
+    }
 
-          if (error) {
-            setDbStatus("err", error.message + " (Код: " + error.code + ")");
-            box.innerHTML = `<div class="empty-box">Не удалось получить анкеты из базы.<br>Инструкция по исправлению показана выше ↑</div>`;
-            return;
-          }
+    document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click', () => { haptic('select'); openTab(b.dataset.tab); }));
 
-          setDbStatus("ok");
+    // ================= Лента =================
+    function renderChips(container, items, active, attr) {
+      container.innerHTML = items.map((c) =>
+        `<button type="button" class="chip${c === active ? ' active' : ''}" data-${attr}="${esc(c)}">${esc(c)}</button>`).join('');
+    }
 
-          let list = Array.isArray(data) ? data : [];
+    renderChips($('#cat-chips'), ['Все', ...CONFIG.CATEGORIES], state.category, 'cat');
+    $('#cat-chips').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-cat]');
+      if (!b || b.dataset.cat === state.category) return;
+      haptic('select');
+      state.category = b.dataset.cat;
+      renderChips($('#cat-chips'), ['Все', ...CONFIG.CATEGORIES], state.category, 'cat');
+      loadFeed();
+    });
 
-          // Сортируем на клиенте по updated_at или created_at (чтобы не падало, если какой-то колонки нет в БД)
-          list.sort((a, b) => {
-            const tA = new Date(a.updated_at || a.created_at || 0).getTime();
-            const tB = new Date(b.updated_at || b.created_at || 0).getTime();
-            return tB - tA;
-          });
-
-          if (searchQuery) {
-            list = list.filter(item =>
-              (item.game && item.game.toLowerCase().includes(searchQuery)) ||
-              (item.name && item.name.toLowerCase().includes(searchQuery)) ||
-              (item.about && item.about.toLowerCase().includes(searchQuery))
-            );
-          }
-
-          if (list.length === 0) {
-            box.innerHTML = `
-              <div class="empty-box">
-                В базе пока нет опубликованных анкет.<br>
-                Перейдите во вкладку <b>«Профиль»</b> и опубликуйте свою заявку!
-              </div>`;
-            return;
-          }
-
-          box.innerHTML = list.map(p => {
-            const isMe = p.id === myUid;
-            return `
-              <div class="mate-row">
-                <div class="avatar">${esc((p.name || "?")[0].toUpperCase())}</div>
-                <div class="mate-info">
-                  <div class="mate-title">
-                    <span>${esc(p.name)}${p.age ? ", " + esc(p.age) : ""} ${isMe ? "(Вы)" : ""}</span>
-                    <span class="badge">${esc(p.category || "Игры")}</span>
-                  </div>
-                  <div class="mate-desc"><b>${esc(p.game)}</b> — ${esc(p.about || "Ищу команду")}</div>
-                </div>
-                ${isMe 
-                  ? `<button type="button" class="btn btn-ghost" data-edit="1">Изменить</button>` 
-                  : `<button type="button" class="btn" data-chat-id="${esc(p.id)}" data-chat-name="${esc(p.name)}">Написать</button>`
-                }
-              </div>
-            `;
-          }).join("");
-
-        } catch (e) {
-          setDbStatus("err", e.message);
-          box.innerHTML = `<div class="empty-box">Ошибка соединения: ${esc(e.message)}</div>`;
-        }
-      }
-
-      // Автоматическое обновление ленты у всех игроков при добавлении/изменении любой анкеты
-      function subscribeFeedRealtime() {
-        if (!sbClient) return;
-        try {
-          feedChannel = sbClient
-            .channel("public_profiles_feed")
-            .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
-              const feedSec = document.getElementById("sec-feed");
-              if (feedSec && feedSec.classList.contains("active")) {
-                renderFeed();
-              }
-            })
-            .subscribe();
-        } catch (e) {}
-      }
-
-      document.getElementById("feed-container").addEventListener("click", (e) => {
-        const editBtn = e.target.closest("[data-edit]");
-        if (editBtn) {
-          openTab("profile");
-          return;
-        }
-        const chatBtn = e.target.closest("[data-chat-id]");
-        if (chatBtn) {
-          openChatModal(chatBtn.getAttribute("data-chat-id"), chatBtn.getAttribute("data-chat-name"));
-        }
-      });
-
-      // 4. СОХРАНЕНИЕ АНКЕТЫ С ПРОВЕРКОЙ ЗАПИСИ НА СЕРВЕР
-      async function loadMyProfile() {
-        if (!sbClient) return;
-        try {
-          const { data, error } = await sbClient
-            .from("profiles")
-            .select("*")
-            .eq("id", myUid)
-            .maybeSingle();
-
-          if (error) {
-            setDbStatus("err", error.message);
-            return;
-          }
-
-          const delBtn = document.getElementById("btn-delete");
-          if (data) {
-            document.getElementById("in-name").value = data.name || "";
-            document.getElementById("in-age").value = data.age || "";
-            document.getElementById("in-cat").value = data.category || "Игры";
-            document.getElementById("in-game").value = data.game || "";
-            document.getElementById("in-about").value = data.about || "";
-            delBtn.style.display = "block";
-          } else {
-            delBtn.style.display = "none";
-          }
-        } catch (e) {}
-      }
-
-      document.getElementById("btn-save").addEventListener("click", async () => {
-        const saveBtn = document.getElementById("btn-save");
-        const name = document.getElementById("in-name").value.trim();
-        const age = parseInt(document.getElementById("in-age").value, 10) || 18;
-        const category = document.getElementById("in-cat").value;
-        const game = document.getElementById("in-game").value.trim();
-        const about = document.getElementById("in-about").value.trim() || "Ищу тиммейтов";
-
-        if (!name || !game) {
-          notify("Заполните никнейм и игру!");
-          return;
-        }
-
-        if (!sbClient) {
-          notify("Ошибка: нет связи с Supabase");
-          return;
-        }
-
-        saveBtn.disabled = true;
-        saveBtn.textContent = "Публикация на сервер...";
-
-        const payload = { id: myUid, name, age, category, game, about };
-
-        try {
-          // Используем .select() после upsert, чтобы убедиться, что строка реально сохранилась в БД Supabase!
-          const { data, error } = await sbClient
-            .from("profiles")
-            .upsert(payload, { onConflict: "id" })
-            .select();
-
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Опубликовать для всех";
-
-          if (error) {
-            setDbStatus("err", error.message + " (" + error.code + ")");
-            notify("Ошибка БД: " + error.message);
-            return;
-          }
-
-          if (!data || data.length === 0) {
-            setDbStatus("err", "Запись заблокирована политикой безопасности RLS (Row Level Security). Выполните SQL-скрипт выше.");
-            notify("БД отклонила запись (включен RLS)!");
-            return;
-          }
-
-          setDbStatus("ok");
-          notify("Анкета опубликована и видна всем!");
-          openTab("feed");
-        } catch (e) {
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Опубликовать для всех";
-          setDbStatus("err", e.message);
-          notify("Ошибка сети: " + e.message);
-        }
-      });
-
-      document.getElementById("btn-delete").addEventListener("click", async () => {
-        if (!sbClient) return;
-        const { error } = await sbClient.from("profiles").delete().eq("id", myUid);
-        if (error) {
-          notify("Ошибка удаления: " + error.message);
-          return;
-        }
-        document.getElementById("in-name").value = "";
-        document.getElementById("in-game").value = "";
-        document.getElementById("in-about").value = "";
-        document.getElementById("btn-delete").style.display = "none";
-        notify("Ваша анкета удалена");
-        openTab("feed");
-      });
-
-      // 5. ЧАТ И СООБЩЕНИЯ
-      async function openChatModal(partnerId, partnerName) {
-        currentChatPartner = { id: partnerId, name: partnerName };
-        document.getElementById("chat-title").textContent = partnerName || "Игрок";
-        document.getElementById("chat-modal").classList.add("open");
-        await loadConversation(partnerId);
-
-        if (sbClient) {
-          if (chatChannel) sbClient.removeChannel(chatChannel);
-          chatChannel = sbClient
-            .channel("room_" + partnerId)
-            .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, payload => {
-              const m = payload.new;
-              if (!currentChatPartner) return;
-              const isRelevant =
-                (m.sender_id === myUid && m.receiver_id === currentChatPartner.id) ||
-                (m.sender_id === currentChatPartner.id && m.receiver_id === myUid);
-              if (isRelevant && m.sender_id !== myUid) {
-                appendBubble(m.content, false);
-              }
-            })
-            .subscribe();
-        }
-      }
-
-      document.getElementById("btn-close-chat").addEventListener("click", () => {
-        document.getElementById("chat-modal").classList.remove("open");
-        currentChatPartner = null;
-        if (sbClient && chatChannel) {
-          sbClient.removeChannel(chatChannel);
-          chatChannel = null;
-        }
-      });
-
-      async function loadConversation(partnerId) {
-        const box = document.getElementById("chat-box");
-        box.innerHTML = `<div class="empty-box">Загрузка переписки...</div>`;
-
-        if (!sbClient) return;
-
-        try {
-          const { data, error } = await sbClient
-            .from("messages")
-            .select("*")
-            .or(`and(sender_id.eq.${myUid},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${myUid})`)
-            .order("created_at", { ascending: true });
-
-          box.innerHTML = "";
-
-          if (error) {
-            box.innerHTML = `<div class="empty-box">Ошибка загрузки чата: ${esc(error.message)}</div>`;
-            return;
-          }
-
-          if (!data || data.length === 0) {
-            box.innerHTML = `<div class="empty-box">Сообщений пока нет. Напишите первым!</div>`;
-            return;
-          }
-
-          data.forEach(m => appendBubble(m.content, m.sender_id === myUid));
-        } catch (e) {
-          box.innerHTML = `<div class="empty-box">Ошибка соединения</div>`;
-        }
-      }
-
-      function appendBubble(text, isMe) {
-        const box = document.getElementById("chat-box");
-        const empty = box.querySelector(".empty-box");
-        if (empty) empty.remove();
-
-        const div = document.createElement("div");
-        div.className = "bubble " + (isMe ? "me" : "them");
-        div.textContent = text;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-      }
-
-      async function handleSend() {
-        const input = document.getElementById("chat-input");
-        const text = input.value.trim();
-        if (!text || !currentChatPartner || !sbClient) return;
-
-        input.value = "";
-        appendBubble(text, true);
-
-        const { error } = await sbClient.from("messages").insert({
-          sender_id: myUid,
-          receiver_id: currentChatPartner.id,
-          content: text
-        });
-
-        if (error) {
-          notify("Ошибка отправки: " + error.message);
-        }
-      }
-
-      document.getElementById("btn-send").addEventListener("click", handleSend);
-      document.getElementById("chat-input").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") handleSend();
-      });
-
-      // 6. ДИАЛОГИ
-      async function renderChatsList() {
-        const box = document.getElementById("chats-container");
-        if (!sbClient) return;
-
-        box.innerHTML = `<div class="empty-box">Загрузка диалогов...</div>`;
-
-        try {
-          const { data: msgs, error } = await sbClient
-            .from("messages")
-            .select("*")
-            .or(`sender_id.eq.${myUid},receiver_id.eq.${myUid}`)
-            .order("created_at", { ascending: false });
-
-          if (error) {
-            box.innerHTML = `<div class="empty-box">Ошибка БД: ${esc(error.message)}</div>`;
-            return;
-          }
-
-          if (!msgs || msgs.length === 0) {
-            box.innerHTML = `<div class="empty-box">У вас пока нет активных переписок.</div>`;
-            return;
-          }
-
-          const partnersMap = new Map();
-          msgs.forEach(m => {
-            const pid = m.sender_id === myUid ? m.receiver_id : m.sender_id;
-            if (!partnersMap.has(pid)) {
-              partnersMap.set(pid, m.content);
-            }
-          });
-
-          const partnerIds = Array.from(partnersMap.keys());
-          const { data: profiles } = await sbClient
-            .from("profiles")
-            .select("id, name")
-            .in("id", partnerIds);
-
-          const nameLookup = {};
-          if (profiles) {
-            profiles.forEach(p => { nameLookup[p.id] = p.name; });
-          }
-
-          box.innerHTML = partnerIds.map(pid => {
-            const pName = nameLookup[pid] || "Игрок";
-            const lastMsg = partnersMap.get(pid) || "";
-            return `
-              <div class="mate-row" style="cursor: pointer;" data-open-id="${esc(pid)}" data-open-name="${esc(pName)}">
-                <div class="avatar">${esc(pName[0].toUpperCase())}</div>
-                <div class="mate-info">
-                  <div class="mate-title">${esc(pName)}</div>
-                  <div class="mate-desc">${esc(lastMsg)}</div>
-                </div>
-                <button type="button" class="btn">Открыть</button>
-              </div>
-            `;
-          }).join("");
-
-        } catch (e) {
-          box.innerHTML = `<div class="empty-box">Ошибка загрузки диалогов</div>`;
-        }
-      }
-
-      document.getElementById("chats-container").addEventListener("click", (e) => {
-        const row = e.target.closest("[data-open-id]");
-        if (row) {
-          openChatModal(row.getAttribute("data-open-id"), row.getAttribute("data-open-name"));
-        }
-      });
-
-      // Первичный запуск и подписка на живые обновления
+    $('#search').addEventListener('input', debounce((e) => {
+      state.query = e.target.value.trim().toLowerCase();
       renderFeed();
-      subscribeFeedRealtime();
-    })();
+    }, 150));
+
+    $('#btn-refresh').addEventListener('click', async () => {
+      haptic();
+      await loadFeed();
+      toast('Лента обновлена', 'ok');
+    });
+
+    function profileCard(p, { preview = false } = {}) {
+      const isMe = p.id === state.uid;
+      const contact = p.contact ? `<span class="tag">${ICONS.link}${esc(p.contact)}</span>` : '';
+      const action = preview ? '' : isMe
+        ? `<div class="card-actions"><button type="button" class="btn ghost flex" data-edit>${ICONS.edit}Изменить анкету</button></div>`
+        : `<div class="card-actions"><button type="button" class="btn flex" data-chat="${esc(p.id)}">${ICONS.send}Написать</button></div>`;
+      return `
+        <article class="card${isMe ? ' me' : ''}">
+          <div class="card-head">
+            ${avatar(p.name, p.id)}
+            <div class="card-main">
+              <div class="card-name">
+                <span>${esc(p.name || 'Без имени')}</span>
+                ${p.age ? `<span class="age">· ${esc(p.age)}</span>` : ''}
+                ${isMe && !preview ? '<span class="you-tag">Вы</span>' : ''}
+              </div>
+              <div class="card-game">${esc(p.game || '—')}</div>
+            </div>
+            <div class="card-time">${preview ? '' : esc(timeAgo(p.updated_at))}</div>
+          </div>
+          <div class="card-about">${esc(p.about || 'Ищу тиммейтов')}</div>
+          <div class="tags">
+            <span class="tag cat">${esc(p.category)}</span>
+            ${p.gender ? `<span class="tag">${p.gender === 'Женский' ? '♀' : '♂'} ${esc(p.gender)}</span>` : ''}
+            <span class="tag">${ICONS.game}${esc(p.platform || 'PC')}</span>
+            ${contact}
+          </div>
+          ${action}
+        </article>`;
+    }
+
+    let feedReq = 0;
+    async function loadFeed(silent = false) {
+      const box = $('#feed');
+      const req = ++feedReq;
+      if (!silent) box.innerHTML = '<div class="skel"></div>'.repeat(3);
+      try {
+        const data = await api.feed(state.category);
+        if (req !== feedReq) return;
+        state.feed = data;
+        setConn('ok');
+        renderFeed();
+      } catch (e) {
+        if (req !== feedReq) return;
+        box.innerHTML = emptyState(ICONS.search, 'Не удалось загрузить', 'Проверьте подключение и попробуйте ещё раз.');
+        handleError(e, 'Не удалось загрузить анкеты');
+      }
+    }
+
+    function renderFeed() {
+      const box = $('#feed');
+      const q = state.query;
+      const list = q
+        ? state.feed.filter((p) => [p.name, p.game, p.about, p.platform].some((v) => String(v || '').toLowerCase().includes(q)))
+        : state.feed;
+
+      $('#feed-count').textContent = list.length ? `${list.length} ${plural(list.length, ['анкета', 'анкеты', 'анкет'])}` : '';
+
+      if (!list.length) {
+        box.innerHTML = q || state.category !== 'Все'
+          ? emptyState(ICONS.search, 'Ничего не нашлось', 'Попробуйте другой запрос или категорию.')
+          : emptyState(ICONS.users, 'Пока пусто', 'Станьте первым — опубликуйте анкету, и её увидят все игроки.',
+              '<button type="button" class="btn" data-goto-profile>Создать анкету</button>');
+        return;
+      }
+      box.innerHTML = list.map((p) => profileCard(p)).join('');
+    }
+
+    function plural(n, forms) {
+      const m10 = n % 10, m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return forms[0];
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
+      return forms[2];
+    }
+
+    $('#feed').addEventListener('click', (e) => {
+      if (e.target.closest('[data-edit], [data-goto-profile]')) return openTab('profile');
+      const b = e.target.closest('[data-chat]');
+      if (b) {
+        const p = state.feed.find((x) => x.id === b.dataset.chat);
+        openChat(b.dataset.chat, p?.name, p?.game);
+      }
+    });
+
+    // ================= Профиль =================
+    renderChips($('#f-category'), CONFIG.CATEGORIES, state.form.category, 'val');
+    renderChips($('#f-platform'), CONFIG.PLATFORMS, state.form.platform, 'val');
+    renderChips($('#f-gender'), CONFIG.GENDERS, state.form.gender, 'val');
+
+    $('#f-gender').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-val]'); if (!b) return;
+      haptic('select');
+      state.form.gender = b.dataset.val;
+      renderChips($('#f-gender'), CONFIG.GENDERS, state.form.gender, 'val');
+      updatePreview();
+    });
+    $('#f-category').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-val]'); if (!b) return;
+      haptic('select');
+      state.form.category = b.dataset.val;
+      renderChips($('#f-category'), CONFIG.CATEGORIES, state.form.category, 'val');
+      updatePreview();
+    });
+    $('#f-platform').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-val]'); if (!b) return;
+      haptic('select');
+      state.form.platform = b.dataset.val;
+      renderChips($('#f-platform'), CONFIG.PLATFORMS, state.form.platform, 'val');
+      updatePreview();
+    });
+
+    function readForm() {
+      const ageRaw = parseInt($('#f-age').value, 10);
+      return {
+        name: $('#f-name').value.trim(),
+        age: Number.isFinite(ageRaw) ? ageRaw : null,
+        game: $('#f-game').value.trim(),
+        gender: state.form.gender,
+        category: state.form.category,
+        platform: state.form.platform,
+        about: $('#f-about').value.trim(),
+        contact: $('#f-contact').value.trim(),
+      };
+    }
+
+    function updateCounters() {
+      document.querySelectorAll('.counter').forEach((c) => {
+        const input = document.getElementById(c.dataset.for);
+        c.textContent = `${input.value.length}/${input.maxLength}`;
+      });
+    }
+
+    function updatePreview() {
+      const f = readForm();
+      $('#preview').innerHTML = profileCard({
+        ...f, id: state.uid || 'preview',
+        name: f.name || 'Ваш никнейм',
+        game: f.game || 'Ваша игра',
+      }, { preview: true });
+    }
+
+    ['#f-name', '#f-age', '#f-game', '#f-about', '#f-contact'].forEach((s) =>
+      $(s).addEventListener('input', () => { updateCounters(); updatePreview(); }));
+
+    function fillForm() {
+      const p = state.me;
+      const tgName = tg?.initDataUnsafe?.user?.first_name || '';
+      $('#f-name').value = p?.name || $('#f-name').value || tgName;
+      $('#f-age').value = p?.age ?? '';
+      $('#f-game').value = p?.game || '';
+      $('#f-about').value = p?.about || '';
+      $('#f-contact').value = p?.contact || '';
+      state.form.category = p?.category || 'Игры';
+      state.form.platform = p?.platform || 'PC';
+      state.form.gender = p?.gender || null;
+      renderChips($('#f-gender'), CONFIG.GENDERS, state.form.gender, 'val');
+      renderChips($('#f-category'), CONFIG.CATEGORIES, state.form.category, 'val');
+      renderChips($('#f-platform'), CONFIG.PLATFORMS, state.form.platform, 'val');
+      $('#btn-delete').hidden = !p;
+      $('#btn-save').textContent = p ? 'Сохранить изменения' : 'Опубликовать анкету';
+      updateCounters();
+      updatePreview();
+    }
+
+    $('#profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = readForm();
+      if (f.name.length < 2) return toast('Никнейм — минимум 2 символа', 'err'), $('#f-name').focus();
+      if (!f.game) return toast('Укажите игру', 'err'), $('#f-game').focus();
+      if (!f.gender) return toast('Укажите пол', 'err'), $('#f-gender').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (f.age !== null && (f.age < 12 || f.age > 99)) return toast('Возраст от 12 до 99', 'err'), $('#f-age').focus();
+
+      const btn = $('#btn-save');
+      btn.disabled = true;
+      btn.textContent = 'Сохраняем…';
+      try {
+        const wasNew = !state.me;
+        state.me = await api.saveProfile(f);
+        haptic('success');
+        toast(wasNew ? 'Анкета опубликована' : 'Анкета обновлена', 'ok');
+        openTab('feed');
+      } catch (err) {
+        handleError(err, 'Не удалось сохранить: ' + (err.message || ''));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = state.me ? 'Сохранить изменения' : 'Опубликовать анкету';
+      }
+    });
+
+    $('#btn-delete').addEventListener('click', async () => {
+      if (!(await confirmDialog('Удалить анкету? Её перестанут видеть в ленте. Переписки сохранятся.'))) return;
+      try {
+        await api.deleteProfile();
+        state.me = null;
+        $('#profile-form').reset();
+        fillForm();
+        haptic('success');
+        toast('Анкета удалена', 'ok');
+      } catch (err) {
+        handleError(err, 'Не удалось удалить');
+      }
+    });
+
+    // ================= Диалоги =================
+    async function loadChats() {
+      const box = $('#chats');
+      if (!box.children.length) box.innerHTML = '<div class="skel" style="height:70px"></div>'.repeat(3);
+      try {
+        const list = await api.conversations();
+        setUnread(list.reduce((s, c) => s + (c.unread || 0), 0));
+        if (!list.length) {
+          box.innerHTML = emptyState(ICONS.chat, 'Переписок пока нет', 'Найдите игрока в ленте и нажмите «Написать».',
+            '<button type="button" class="btn" data-goto-feed>К поиску</button>');
+          return;
+        }
+        box.innerHTML = list.map((c) => {
+          const name = c.partner_name || 'Игрок';
+          return `
+            <button type="button" class="chat-row${c.unread ? ' unread' : ''}" data-open="${esc(c.partner_id)}" data-name="${esc(name)}" data-game="${esc(c.partner_game || '')}">
+              ${avatar(name, c.partner_id)}
+              <div class="card-main">
+                <div class="chat-line">
+                  <span class="card-name">${esc(name)}</span>
+                  <span class="card-time">${esc(timeAgo(c.last_at))}</span>
+                </div>
+                <div class="chat-line">
+                  <span class="chat-preview">${c.last_from_me ? '<span class="from-me">Вы: </span>' : ''}${esc(c.last_message)}</span>
+                  ${c.unread ? `<span class="count">${c.unread > 99 ? '99+' : c.unread}</span>` : ''}
+                </div>
+              </div>
+            </button>`;
+        }).join('');
+      } catch (e) {
+        box.innerHTML = emptyState(ICONS.chat, 'Не удалось загрузить', 'Попробуйте открыть вкладку ещё раз.');
+        handleError(e, 'Не удалось загрузить диалоги');
+      }
+    }
+
+    $('#chats').addEventListener('click', (e) => {
+      if (e.target.closest('[data-goto-feed]')) return openTab('feed');
+      const r = e.target.closest('[data-open]');
+      if (r) openChat(r.dataset.open, r.dataset.name, r.dataset.game);
+    });
+
+    function setUnread(n) {
+      state.unread = n;
+      const b = $('#nav-badge');
+      b.hidden = n <= 0;
+      b.textContent = n > 99 ? '99+' : String(n);
+    }
+
+    async function refreshUnread() {
+      try {
+        const list = await api.conversations();
+        setUnread(list.reduce((s, c) => s + (c.unread || 0), 0));
+      } catch (_) {}
+    }
+
+    // ================= Чат =================
+    let lastDay = null;
+    const chatBody = $('#chat-body');
+    const chatInput = $('#chat-input');
+
+    function onTgBack() { closeChat(); }
+
+    async function openChat(partnerId, name, game) {
+      if (!partnerId || partnerId === state.uid) return;
+      if (!state.me) {
+        toast('Сначала заполните анкету — чтобы вам было кому ответить', 'err');
+        return openTab('profile');
+      }
+      haptic();
+      state.chat = { id: partnerId, name: name || 'Игрок', game: game || '' };
+      $('#chat-avatar').innerHTML = avatar(state.chat.name, partnerId, true);
+      $('#chat-name').textContent = state.chat.name;
+      $('#chat-sub').textContent = state.chat.game || '';
+      $('#chat').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      try { tg?.BackButton?.show(); tg?.BackButton?.onClick(onTgBack); } catch (_) {}
+
+      if (!name || !game) api.profile(partnerId).then((p) => {
+        if (!p || state.chat?.id !== partnerId) return;
+        $('#chat-name').textContent = state.chat.name = p.name;
+        $('#chat-sub').textContent = state.chat.game = `${p.game} · ${p.platform}`;
+        $('#chat-avatar').innerHTML = avatar(p.name, partnerId, true);
+      });
+
+      chatBody.innerHTML = '<div class="chat-empty">Загрузка…</div>';
+      lastDay = null;
+      try {
+        const msgs = await api.conversation(partnerId);
+        if (state.chat?.id !== partnerId) return;
+        chatBody.innerHTML = '';
+        if (!msgs.length) {
+          chatBody.innerHTML = `<div class="chat-empty">Сообщений пока нет.<br>Поздоровайтесь и предложите сыграть 👋</div>`;
+        } else {
+          msgs.forEach((m) => appendMessage(m, false));
+          scrollChat(false);
+        }
+        api.markRead(partnerId).then(refreshUnread);
+      } catch (e) {
+        chatBody.innerHTML = '<div class="chat-empty">Не удалось загрузить переписку</div>';
+        handleError(e, 'Ошибка загрузки чата');
+      }
+      setTimeout(() => chatInput.focus(), 250);
+    }
+
+    function closeChat() {
+      $('#chat').classList.remove('open');
+      document.body.style.overflow = '';
+      state.chat = null;
+      try { tg?.BackButton?.offClick(onTgBack); tg?.BackButton?.hide(); } catch (_) {}
+      if (state.tab === 'chats') loadChats();
+    }
+    $('#chat-back').addEventListener('click', closeChat);
+
+    function appendMessage(m, scroll = true, extraClass = '') {
+      const placeholder = chatBody.querySelector('.chat-empty');
+      if (placeholder) placeholder.remove();
+
+      const day = new Date(m.created_at).toDateString();
+      if (day !== lastDay) {
+        lastDay = day;
+        const d = document.createElement('div');
+        d.className = 'day';
+        d.textContent = fmtDay(m.created_at);
+        chatBody.appendChild(d);
+      }
+
+      const el = document.createElement('div');
+      el.className = `msg ${m.sender_id === state.uid ? 'me' : 'them'} ${extraClass}`.trim();
+      if (m.id) el.dataset.id = m.id;
+      el.textContent = m.content;
+      const t = document.createElement('span');
+      t.className = 't';
+      t.textContent = fmtTime(m.created_at);
+      el.appendChild(t);
+      chatBody.appendChild(el);
+      if (scroll) scrollChat(true);
+      return el;
+    }
+
+    function scrollChat(smooth) {
+      requestAnimationFrame(() => chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }));
+    }
+
+    function autoGrow() {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 130) + 'px';
+      $('#chat-send').disabled = !chatInput.value.trim();
+    }
+    chatInput.addEventListener('input', autoGrow);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#chat-form').requestSubmit(); }
+    });
+
+    $('#chat-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text || !state.chat) return;
+      const partnerId = state.chat.id;
+      chatInput.value = '';
+      autoGrow();
+      haptic();
+
+      const el = appendMessage({ sender_id: state.uid, content: text, created_at: new Date().toISOString() }, true, 'pending');
+      try {
+        const saved = await api.send(partnerId, text);
+        el.classList.remove('pending');
+        el.dataset.id = saved.id;
+      } catch (err) {
+        el.classList.remove('pending');
+        el.classList.add('failed');
+        handleError(err, 'Сообщение не отправлено');
+      }
+    });
+
+    // ================= Realtime =================
+    function subscribeRealtime() {
+      const sb = state.sb;
+
+      sb.channel('inbox:' + state.uid)
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${state.uid}` },
+          ({ new: m }) => {
+            if (state.chat && m.sender_id === state.chat.id) {
+              appendMessage(m);
+              api.markRead(m.sender_id);
+              haptic('light');
+            } else {
+              setUnread(state.unread + 1);
+              haptic('success');
+              const who = state.feed.find((p) => p.id === m.sender_id)?.name || 'игрока';
+              toast(`Новое сообщение от ${who}`);
+              if (state.tab === 'chats') loadChats();
+            }
+          })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') setConn('ok');
+          else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setConn('err');
+        });
+
+      const refreshFeed = debounce(() => { if (state.tab === 'feed') loadFeed(true); }, 500);
+      sb.channel('profiles-feed')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, refreshFeed)
+        .subscribe();
+    }
+
+    // Обновить данные, когда приложение снова стало видимым
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible' || !state.uid) return;
+      refreshUnread();
+      if (state.tab === 'feed') loadFeed(true);
+    });
+
+    // ================= Старт =================
+    async function init() {
+      try {
+        tg?.ready();
+        tg?.expand();
+        tg?.setHeaderColor?.('#0a0c16');
+        tg?.setBackgroundColor?.('#0a0c16');
+      } catch (_) {}
+
+      fillForm();
+
+      if (!window.supabase?.createClient) {
+        setConn('err');
+        $('#feed').innerHTML = emptyState(ICONS.search, 'Нет соединения', 'Не загрузилась библиотека Supabase. Проверьте интернет и перезапустите приложение.');
+        return;
+      }
+
+      state.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'frsearch-auth' },
+      });
+
+      $('#feed').innerHTML = '<div class="skel"></div>'.repeat(3);
+
+      try {
+        const user = await api.signIn();
+        state.uid = user.id;
+      } catch (e) {
+        $('#feed').innerHTML = emptyState(ICONS.search, 'Не удалось войти', 'Сервер не принял вход. Настройка описана выше.');
+        handleError(e, 'Ошибка входа');
+        return;
+      }
+
+      try { state.me = await api.myProfile(); } catch (e) { handleError(e); }
+      fillForm();
+
+      await loadFeed();
+      refreshUnread();
+      subscribeRealtime();
+    }
+
+    init();
+  })();
   </script>
 </body>
 </html>
